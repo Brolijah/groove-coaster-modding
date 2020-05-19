@@ -1,0 +1,33 @@
+E0 17 50 00 ac_shiva_easy.dat
+E0 17 50 48 bgm_b-382_shiva_BGM.asn
+E1 17 50 00 ac_shiva_easy_clip.dat
+E1 17 50 48 bgm_b-382_shiva_SHOT.asn
+E2 17 50 00 ac_shiva_easy_ext.dat
+E4 17 50 00 ac_shiva_normal.dat
+E5 17 50 00 ac_shiva_normal_clip.dat
+E6 17 50 00 ac_shiva_normal_ext.dat
+E8 17 50 00 ac_shiva_hard.dat
+E9 17 50 00 ac_shiva_hard_clip.dat
+EA 17 50 00 ac_shiva_hard_ext.dat
+
+XX XX 50 48 = .asn
+XX XX 50 00 = .dat
+
+XX 17 XX XX constant in this song (maybe others too?)
+
+after each difficulty, one is skipped. as follows:
+
+E0 sound bgm_b-382_shiva_BGM.asn
+E1 sound bgm_b-382_shiva_SHOT.asn
+
+E0 easy ac_shiva_easy.dat
+E1 easy ac_shiva_easy_clip.dat
+E2 easy ac_shiva_easy_ext.dat
+  E3 (next diff, so skipped)
+E4 normal ac_shiva_normal.dat
+E5 normal ac_shiva_normal_clip.dat
+E6 normal ac_shiva_normal_ext.dat
+  E7 (next diff, so skipped)
+E8 hard ac_shiva_hard.dat
+E9 hard ac_shiva_hard_clip.dat
+EA hard ac_shiva_hard_ext.dat
