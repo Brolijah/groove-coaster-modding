@@ -3,10 +3,10 @@ ALAR_decode_encode/packed_out
 ALAR_decode_encode/unpacked
 ALAR_decode_encode/Debug
 ALAR_decode_encode/Release
-ALAR_decode_encode/.vs
+.vs
+x64
 GC_chart_editor/Debug
 GC_chart_editor/Release
-GC_chart_editor/.vs
+GC_chart_editor/x64
 GC_chart_editor/humanized
 GC_chart_editor/chart
-.vs/ALAR_decode_encode/v16/.suo

@@ -69,8 +69,8 @@ struct HEADERFILEENTRY {
     uint8_t name[0x20];
 };
 
-#define fileOrderLength 13
-char fileOrder[fileOrderLength][2][20] = {
+//#define fileOrderLength 13
+/*char fileOrder[fileOrderLength][2][20] = {
     {"easy.dat", 0x00},
     {"BGM.asn", 0x00},
     {"easy_clip.dat", 0x01},
@@ -84,6 +84,15 @@ char fileOrder[fileOrderLength][2][20] = {
     {"hard.dat", 0x08},
     {"hard_clip.dat", 0x09},
     {"hard_ext.dat", 0x0A}
+};*/
+
+#define fileOrderLength 5
+char fileOrder[fileOrderLength][2][20] = {
+    {"hard.dat", 0x00},
+    {"BGM.asn", 0x00},
+    {"hard_clip.dat", 0x01},
+    {"SHOT.asn", 0x01},
+    {"hard_ext.dat", 0x02}
 };
 
 #define fOrderEasyLength 20
@@ -376,9 +385,9 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
 
 int main(void) {
     //unpack("./packed_in/Stage00951.aar", "./unpacked/Stage00951.aar/");
-    unpack_dir("./packed_in/", "./unpacked/");
+    //unpack_dir("./packed_in/", "./unpacked/");
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    pack(951, "./unpacked/Stage00951.aar/", "./packed_out/Stage00951.aar");
+    pack(951, "./unpacked/Stage00951.aar/", "D:/games/Groove Coaster for Steam/Data/Stage00951.aar");
     //unpack();
     
 
