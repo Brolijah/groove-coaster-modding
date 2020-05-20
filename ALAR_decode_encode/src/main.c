@@ -86,6 +86,33 @@ char fileOrder[fileOrderLength][2][20] = {
     {"hard_ext.dat", 0x0A}
 };
 
+#define fOrderEasyLength 20
+char fOrderEasy[fOrderEasyLength][20] = {
+    "easy.dat",
+    "easy_clip.dat",
+    "easy_ext.dat"
+};
+
+#define fOrderNormalLength 20
+char fOrderNormal[fOrderNormalLength][20] = {
+    "normal.dat",
+    "normal_clip.dat",
+    "normal_ext.dat"
+};
+
+#define fOrderHardLength 20
+char fOrderHard[fOrderHardLength][20] = {
+    "hard.dat",
+    "hard_clip.dat",
+    "hard_ext.dat"
+};
+
+#define fOrderSoundLength 20
+char fOrderSound[fOrderSoundLength][20] = {
+    "BGM.asn",
+    "SHOT.asn"
+};
+
 void unpack(char* fileIn, char* directoryOut) {
     char* headerTypeName[5]; //should be "ALAR"
     uint8_t headerType;
@@ -201,7 +228,8 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
     fseek(fp, 1, SEEK_CUR); //advance pointer once
 
     //should be user-defined later on
-    uint16_t headerIDstartCount = 0x17E0; //inverted cuz endian
+    //uint16_t headerIDstartCount = 0x17E0; //inverted cuz endian
+    uint16_t headerIDstartCount = 0x0000; //inverted cuz endian
     printf("song ID: %d\n", songID);
     headerIDstartCount = songID << 4;
 
@@ -347,10 +375,10 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
 }
 
 int main(void) {
-    //unpack("./packed_in/Stage00382_unmodified.aar");
-    //unpack_dir("./packed_in/", "./unpacked/");
+    //unpack("./packed_in/Stage00951.aar", "./unpacked/Stage00951.aar/");
+    unpack_dir("./packed_in/", "./unpacked/");
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    pack(382, "./unpacked/Stage00951.aar/", "./packed_out/Stage00951.aar");
+    pack(951, "./unpacked/Stage00951.aar/", "./packed_out/Stage00951.aar");
     //unpack();
     
 
