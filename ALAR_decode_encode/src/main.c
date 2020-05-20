@@ -70,20 +70,20 @@ struct HEADERFILEENTRY {
 };
 
 #define fileOrderLength 13
-char fileOrder[fileOrderLength][20] = {
-    "easy.dat",
-    "BGM.asn",
-    "easy_clip.dat",
-    "SHOT.asn",
-    "easy_ext.dat",
-    "__SWITCH__",
-    "normal.dat",
-    "normal_clip.dat",
-    "normal_ext.dat",
-    "__SWITCH__",
-    "hard.dat",
-    "hard_clip.dat",
-    "hard_ext.dat"
+char fileOrder[fileOrderLength][2][20] = {
+    {"easy.dat", 0x00},
+    {"BGM.asn", 0x00},
+    {"easy_clip.dat", 0x01},
+    {"SHOT.asn", 0x01},
+    {"easy_ext.dat", 0x02},
+    {"__SWITCH__", 0xFF},
+    {"normal.dat", 0x04},
+    {"normal_clip.dat", 0x05},
+    {"normal_ext.dat", 0x06},
+    {"__SWITCH__", 0x07},
+    {"hard.dat", 0x08},
+    {"hard_clip.dat", 0x09},
+    {"hard_ext.dat", 0x0A}
 };
 
 void unpack(char* fileIn, char* directoryOut) {
@@ -156,9 +156,6 @@ void unpack(char* fileIn, char* directoryOut) {
             printf("%s", fpout);
             fwrite(fileData, sizeof(uint8_t), files[i].size, fpout);
             fclose(fpout);
-
-
-            printf("\n\n");
 
             free(fileData);
         }
@@ -274,58 +271,57 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
     int indexprogress = 16;
     //use fileTypeCounter
     //use fileTypeSoundCounter
+
+    //sort all files first
+    //struct HEADERFILEENTRY* filesSorted = malloc(fileCount * sizeof(struct HEADERFILEENTRY));
     int b;
-    for (b = 0; b < fileCount; b++) {
-        for (i = 0; i < fileCount; i++) {
+    for (b = 0; b < 1; b++) {
+        for (i = 0; i < fileOrderLength; i++) {
             int a;
-            for (a = 0; a < fileOrderLength; a++) {
-                if ((strstr(&files[i].name, &fileOrder[a])) && a == progress) {
-                    printf("%s is a file of type %s\n", files[i].name, fileOrder[a]);
-                    /*char tempName[0x21];
-                    snprintf(&tempName, 0x20, "%s", files[i].name);
-                    fwrite(&tempName, sizeof(uint8_t), 0x20, fp);
-                    fwrite("\x0\x0", sizeof(uint8_t), 2, fp);*/
-                    char* fileData = (char*)malloc(files[i].size * sizeof(uint8_t));
+            if (strstr(&fileOrder[i][0], "__SWITCH__")) {
+                printf("switching difficulty\n");
+                continue;
+            }
+            printf("looking for %s (priority %x) in:\n", fileOrder[i][0], fileOrder[i][1][0]);
+            for (a = 0; a < fileCount; a++) {
+                printf("    %s\n", files[a].name);
+                if (strstr(&files[a].name, &fileOrder[i][0])) {
+                    printf("MATCH FOUND!\n");
+
+                    char* fileData = (char*)malloc(files[a].size * sizeof(uint8_t));
                     FILE* fpi;
                     char fileIn[120];
-                    snprintf(&fileIn, 120, "%s%s", directoryIn, files[i].name);
+                    snprintf(&fileIn, 120, "%s%s", directoryIn, files[a].name);
                     fpi = fopen(&fileIn, "rb");
                     //read data into fileData
-                    printf("reading data into mem\n");
-                    fread(fileData, sizeof(uint8_t), files[i].size, fpi);
+                    printf("saving data from file %s into the archive\n", files[a].name);
+                    fread(fileData, sizeof(uint8_t), files[a].size, fpi);
                     fclose(fpi);
 
-                    //writing file into archive
-                    //difference of 5 between files? file 1: 0, file 2: 10, file 3: 15
 
-                    fwrite(&files[i].name, sizeof(uint8_t), 0x20, fp); //write name
+                    fwrite(&files[a].name, sizeof(uint8_t), 0x20, fp); //write name
                     fseek(fp, 2, SEEK_CUR); //advance pointer twice
                     int fileOffsetPreFile = ftell(fp);
-                    fwrite(fileData, sizeof(uint8_t), files[i].size, fp); //write file data
+                    fwrite(fileData, sizeof(uint8_t), files[a].size, fp); //write file data
                     free(fileData);
                     //update index
                     int fileOffset = ftell(fp);
                     fseek(fp, indexprogress, SEEK_SET);
                     indexprogress += 16;
-                    if (files[i].type == (headerIDstartType ^ 0x4800)) { //.asn file
-                        uint16_t type = ((headerIDstartCount & 0xFF00/*strip out the count start*/) ^ fileTypeSoundCounter);
-                        uint32_t typeComplete = (files[i].type & 0x0000FFFF) << 16;
-                        typeComplete ^= type;
-                        headerIDend = typeComplete;
-                        fwrite(&typeComplete, sizeof(uint32_t), 1, fp);
-                    }
-                    else { //.dat file
-                        uint16_t type = ((headerIDstartCount & 0xFF00/*strip out the count start*/) ^ fileTypeCounter);
-                        uint32_t typeComplete = (files[i].type & 0x00FF) << 16;
-                        typeComplete ^= type;
-                        headerIDend = typeComplete;
-                        fwrite(&typeComplete, sizeof(uint32_t), 1, fp);
-                    }
+
+                    //update "type" in index
+                    //uint16_t type = ((headerIDstartCount & 0xFF00) ^ fileOrder[a][1][0] ^ (headerIDstart));
+                    uint16_t type = headerIDstartCount ^ fileOrder[i][1][0];
+                    uint32_t typeComplete = (files[a].type & 0x0000FFFF) << 16;
+                    typeComplete ^= type;
+                    headerIDend = typeComplete;
+                    fwrite(&typeComplete, sizeof(uint32_t), 1, fp);
+
                     uint32_t fileStart = (uint32_t)fileOffsetPreFile;
                     printf("fileOffset: %x\n", fileStart); //broken?
                     fwrite(&fileStart, sizeof(uint32_t), 1, fp);
 
-                    fwrite(&files[i].size, sizeof(uint32_t), 1, fp);
+                    fwrite(&files[a].size, sizeof(uint32_t), 1, fp);
 
                     uint32_t magicalValue = 0x80000001;
                     fwrite(&magicalValue, sizeof(uint32_t), 1, fp);
@@ -333,20 +329,9 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
                     fseek(fp, fileOffset, SEEK_SET);
 
 
-                    if (strstr(&fileOrder[a+1], "__SWITCH__")) {
-                        progress += 2;
-                        fileTypeCounter += 2;
-                    }
-                    else {
-                        progress++;
-                        if (files[i].type == (headerIDstartType ^ 0x4800)) {
-                            fileTypeSoundCounter++;
-                        }
-                        else {
-                            fileTypeCounter++;
-                        }
-                        
-                    }
+                    progress++;
+
+                    break;
                 }
             }
         }
@@ -363,9 +348,9 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
 
 int main(void) {
     //unpack("./packed_in/Stage00382_unmodified.aar");
-    unpack_dir("./packed_in/", "./unpacked/");
+    //unpack_dir("./packed_in/", "./unpacked/");
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    //pack(382, "./unpacked/", "./packed_out/Stage00382.aar");
+    pack(382, "./unpacked/Stage00951.aar/", "./packed_out/Stage00951.aar");
     //unpack();
     
 
