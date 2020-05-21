@@ -69,8 +69,8 @@ struct HEADERFILEENTRY {
     uint8_t name[0x20];
 };
 
-//#define fileOrderLength 13
-/*char fileOrder[fileOrderLength][2][20] = {
+#define fileOrderLength 13
+char fileOrder[fileOrderLength][2][20] = {
     {"easy.dat", 0x00},
     {"BGM.asn", 0x00},
     {"easy_clip.dat", 0x01},
@@ -84,16 +84,24 @@ struct HEADERFILEENTRY {
     {"hard.dat", 0x08},
     {"hard_clip.dat", 0x09},
     {"hard_ext.dat", 0x0A}
-};*/
+};
 
-#define fileOrderLength 5
+enum PACKTYPES {
+    SONG_EASY,
+    SONG_NORMAL,
+    SONG_HARD,
+    SONG_EASY_NORMAL_HARD
+};
+
+
+/*#define fileOrderLength 5
 char fileOrder[fileOrderLength][2][20] = {
     {"hard.dat", 0x00},
     {"BGM.asn", 0x00},
     {"hard_clip.dat", 0x01},
     {"SHOT.asn", 0x01},
     {"hard_ext.dat", 0x02}
-};
+};*/
 
 #define fOrderEasyLength 20
 char fOrderEasy[fOrderEasyLength][20] = {
@@ -260,7 +268,7 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
     printf("files to be packed:\n");
     uint16_t fileCount = 0;
     while ((entry = readdir(indir)) != NULL) {
-        if (entry->d_name[0] != '.') {
+        if (entry->d_type == DT_REG) {
             printf("    %s\n", entry->d_name);
             fileCount++;
         }
@@ -273,28 +281,49 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
     fwrite(&headerIDstart, sizeof(uint8_t), 4, fp);
     fwrite(&headerIDend, sizeof(uint8_t), 4, fp); //just zeroes for now, should be updated once done writing all files
 
-    indir = opendir(directoryIn);
-    readdir(indir); readdir(indir); //clean out the "." and ".."
-    int i;
-    for (i = 0; i < fileCount; i++) {
-        entry = readdir(indir);
-        snprintf(&files[i].name, 0x20, "%s", entry->d_name);
-        if (strstr(entry->d_name, ".asn")) {
-            files[i].type = headerIDstartType ^ 0x4800;
-        }
-        else if (strstr(entry->d_name, ".dat")) {
-            files[i].type = headerIDstartType;
-        }
-        FILE* fpi;
-        char fileIn[120];
-        snprintf(&fileIn, 120, "%s%s", directoryIn, files[i].name);
-        fpi = fopen(&fileIn, "rb");
-        fseek(fpi, 0, SEEK_END);
-        files[i].size = (uint32_t)ftell(fpi);
-        fclose(fpi);
-        printf("file name: %s, file size: %d, file type (not final): %x\n", files[i].name, files[i].size, files[i].type);
-    }
+    bool easy = false;
+    bool normal = false;
+    bool hard = false;
 
+    indir = opendir(directoryIn);
+    int i = 0;
+    while((entry = readdir(indir)) != NULL){
+        if (entry->d_type == DT_REG) {
+            snprintf(&files[i].name, 0x20, "%s", entry->d_name);
+            if (strstr(entry->d_name, ".asn")) {
+                files[i].type = headerIDstartType ^ 0x4800;
+            }
+            else if (strstr(entry->d_name, ".dat")) {
+                files[i].type = headerIDstartType;
+            }
+            FILE* fpi;
+            char fileIn[120];
+            snprintf(&fileIn, 120, "%s%s", directoryIn, files[i].name);
+            fpi = fopen(&fileIn, "rb");
+            fseek(fpi, 0, SEEK_END);
+            files[i].size = (uint32_t)ftell(fpi);
+            fclose(fpi);
+            printf("file name: %s, file size: %d, file type (not final): %x\n", files[i].name, files[i].size, files[i].type);
+            for (int a = 0; a < fOrderEasyLength; a++) {
+                if (strstr(&entry->d_name, &fOrderEasy[a][0])) {
+                    printf("%s", strstr(&entry->d_name, &fOrderEasy[a][0]));
+                    easy = true;
+                }
+            }
+            for (int a = 0; a < fOrderNormalLength; a++) {
+                if (strstr(&entry->d_name, &fOrderNormal[a][0])) {
+                    normal = true;
+                }
+            }
+            for (int a = 0; a < fOrderHardLength; a++) {
+                if (strstr(&entry->d_name, &fOrderHard[a][0])) {
+                    hard = true;
+                }
+            }
+            i++;
+        }
+    }
+    closedir(indir);
     
     //add empty index table for file offset
     for (i = 0; i < fileCount; i++) {
@@ -304,22 +333,35 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
 
     
 
-    int progress = 0;
+    
     int indexprogress = 16;
     //use fileTypeCounter
     //use fileTypeSoundCounter
 
     //sort all files first
+
+    if (easy) {
+        printf("EASY");
+    }
+    if (normal) {
+        printf("NORMAL");
+    }
+    if (hard) {
+        printf("HARD");
+    }
+
     //struct HEADERFILEENTRY* filesSorted = malloc(fileCount * sizeof(struct HEADERFILEENTRY));
+    uint8_t progress = 0;
     int b;
     for (b = 0; b < 1; b++) {
         for (i = 0; i < fileOrderLength; i++) {
             int a;
             if (strstr(&fileOrder[i][0], "__SWITCH__")) {
                 printf("switching difficulty\n");
+                progress++;
                 continue;
             }
-            printf("looking for %s (priority %x) in:\n", fileOrder[i][0], fileOrder[i][1][0]);
+            printf("looking for %s (priority %x) in:\n", fileOrder[i][0], progress);
             for (a = 0; a < fileCount; a++) {
                 printf("    %s\n", files[a].name);
                 if (strstr(&files[a].name, &fileOrder[i][0])) {
@@ -348,7 +390,7 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
 
                     //update "type" in index
                     //uint16_t type = ((headerIDstartCount & 0xFF00) ^ fileOrder[a][1][0] ^ (headerIDstart));
-                    uint16_t type = headerIDstartCount ^ fileOrder[i][1][0];
+                    uint16_t type = headerIDstartCount ^ progress/*fileOrder[i][1][0]*/;
                     uint32_t typeComplete = (files[a].type & 0x0000FFFF) << 16;
                     typeComplete ^= type;
                     headerIDend = typeComplete;
@@ -366,13 +408,17 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
                     fseek(fp, fileOffset, SEEK_SET);
 
 
-                    progress++;
+                    if (fileOrder[i][1][0] != fileOrder[i + 1][1][0]) {
+                        progress++;
+                    }
 
                     break;
                 }
             }
         }
     }
+
+    
 
     //correcting the "end" part of IDs
     fseek(fp, 0xc, SEEK_SET);
@@ -387,8 +433,11 @@ int main(void) {
     //unpack("./packed_in/Stage00951.aar", "./unpacked/Stage00951.aar/");
     //unpack_dir("./packed_in/", "./unpacked/");
     printf("\n\n\n\n\n\n\n\n\n\n\n\n\n");
-    pack(951, "./unpacked/Stage00951.aar/", "D:/games/Groove Coaster for Steam/Data/Stage00951.aar");
+    //pack(951, "./unpacked/Stage00951.aar/", "D:/games/Groove Coaster for Steam/Data/Stage00951.aar");
     //unpack();
+
+    //unpack("C:/dev/groove-coaster-modding/ALAR_decode_encode/packed_in/TableEtc.aar", "C:/dev/out/");
+    unpack("C:/dev/out/HomeMenu.aar", "C:/dev/out/New folder/");
     
 
     return 0;

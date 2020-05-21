@@ -24,13 +24,19 @@ visual table: every "entry" is 16 bytes long and consists of 4 32-bit values
 	int32 : 
 
 gameplay table:
+	00 00 00 00 - idk
+	00 00 00 30 - counts up one every next "projectile" (so an ID, of sorts)
+	00 00 46 7D - for timing
+	01 00 00 20 00 0F 00 04 - controls the type of "projectile"
+	FF FF FF FF FF FF FF FF 00 00 FF FF - ???
+	00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 41 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 FF FF FF FF FF FF FF FF - holds data for 
+	00 00 00 00 3F B3 33 33 00 00 00 04 3F 80 00 00 42 34 00 00 00 00 00 00 3F 80 00 00 - constant, no clue what it's for
 	
-
 */
 
 //0x1502 - 0x1509
 
-void humanize(char* fileIn, char* fileOut) {
+/*void humanize(char* fileIn, char* fileOut) {
 	FILE* fpi;
 	fpi = fopen(fileIn, "rb");
 	fseek(fpi, 0, SEEK_END);
@@ -85,11 +91,108 @@ void humanize(char* fileIn, char* fileOut) {
 
 chartisize(char* fileIn, char* fileOut) {
 	//use strtol
+}*/
+
+struct TGAHEADER {
+	uint8_t IDlength;
+	uint8_t colorMapType;
+	uint8_t imageType;
+	//color map specification:
+	//uint16_t firstEntryIndex;
+	uint16_t colorMapLength;
+	uint8_t colorMapEntrySize;
+	//image specification:
+	uint16_t xOrigin;
+	uint16_t yOrigin;
+	uint16_t width;
+	uint16_t height;
+	uint8_t depth;
+	uint8_t imageDescriptor;
+};
+
+void atxToTga(char* fileIn, char* fileOut) {
+	FILE* fpi;
+	fpi = fopen(fileIn, "rb");
+	char chars[5] = "TEST";
+	fread(&chars, sizeof(char), 4, fpi);
+	if (strstr(&chars, "ALTX")) {
+		printf("ALTX file supplied\n");
+	}
+	else {
+		printf("the supplied file is not an ALTX file!\n");
+		return;
+	}
+
+	while (true) {
+		fread(&chars, sizeof(char), 4, fpi);
+		if (strstr(&chars, "ALIG")) {
+			printf("ALIG found\n");
+			break;
+		}
+	}
+	
+	uint32_t width = 1;
+	uint32_t height = 1;
+	char textureType[5] = "NONE";
+
+	fread(&width, sizeof(uint8_t), 4, fpi);
+	printf("width: %d\n", width);
+
+	fread(&textureType, sizeof(uint8_t), 4, fpi);
+	printf("type: %s\n", textureType);
+
+	int headerSize = 0x38;
+
+	fseek(fpi, 0, SEEK_END);
+	int dataSize = ftell(fpi) - headerSize;
+
+	fseek(fpi, headerSize, SEEK_SET); //this is where the image seems to start
+	char* fileData = (char*)malloc(dataSize * sizeof(uint8_t));
+	fread(fileData, 1, dataSize, fpi);
+	printf("datasize: %d\n", dataSize);
+	if (strstr(&textureType, "BGRA")) {
+		int dataBytes = dataSize >> 2; //divide by 4
+		
+	}
+	else {
+
+	}
+
+
+	/*struct TGAHEADER tgaHeader;
+	tgaHeader.IDlength = (uint8_t)0;
+	tgaHeader.colorMapType = (uint8_t)0;
+	tgaHeader.imageType = (uint8_t)2; //true-type color, no RLE
+	tgaHeader.xOrigin = (uint16_t)0;
+	tgaHeader.yOrigin = (uint16_t)0;
+	tgaHeader.width = (uint16_t)width;
+	tgaHeader.height = (uint16_t)height;
+	tgaHeader.depth = (uint8_t)8;
+	tgaHeader.imageDescriptor = (uint8_t)0;
+
+	FILE* fpo;
+	fpo = fopen(fileOut, "wb");
+	//read data into fileData
+	printf("saving data from file %s into the archive\n", fileOut);
+	printf("datasize: %d\n", dataSize);
+	printf("header size: %d\n", sizeof(struct TGAHEADER));
+	fwrite(&tgaHeader, sizeof(struct TGAHEADER), 1, fpo);
+	fseek(fpi, headerSize, SEEK_SET);
+	for (int i = 0; i < dataSize; i++) {
+		char temp;
+		fread(&temp, sizeof(char), 1, fpi);
+		fwrite(&temp, sizeof(char), 1, fpo);
+	}
+	
+	fclose(fpo);
+	fclose(fpi);*/
+
+	//free(fileData);
 }
 
 int main(void) {
-	humanize("C:/dev/groove-coaster-modding/ALAR_decode_encode/unpacked/Stage00951.aar/ac_plotmgc_hard.dat", "./humanized/ac_plotmgc_hard.txt");
-
+	//humanize("C:/dev/groove-coaster-modding/ALAR_decode_encode/unpacked/Stage00951.aar/ac_plotmgc_hard.dat", "./humanized/ac_plotmgc_hard.txt");
+	atxToTga("C:/Users/Frain_Breezee/Downloads/Aqualead_LZSS/out_acid2_start.atx", "./humanized/acid2_start.tga");
 
 	return 0;
 }
