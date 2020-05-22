@@ -5,8 +5,8 @@
 #include <filesystem>
 #include <Windows.h>
 
-#define LOG_ERROR(x) std::cout << "ERROR: "<< x << std::endl;
-#define LOG_INFO(x) std::cout <<  "INFO:  "<< x << std::endl;
+#define LOG_ERROR(x) std::cout << std::dec << "ERROR: "<< x << std::endl;
+#define LOG_INFO(x) std::cout << std::dec <<  "INFO:  "<< x << std::endl;
 
 namespace fs = std::filesystem;
 
@@ -102,7 +102,7 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 			ifs.seekg(0, SEEK_END);
 			LOG_ERROR(std::dec << ifs.tellg());
 
-			LOG_INFO("Files in archive: " << (unsigned int)headerFileCount);
+			LOG_INFO("Files in archive: " << std::hex << (unsigned int)headerFileCount);
 			struct HEADERFILEENTRY* files = (struct HEADERFILEENTRY*)malloc(headerFileCount * sizeof(struct HEADERFILEENTRY));
 			ifs.seekg(8, SEEK_SET);
 			ifs.read(reinterpret_cast<char*>(&packageID), sizeof(packageID));
@@ -110,19 +110,16 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 			
 			int64_t tempLoc = ifs.tellg();
 			for (int i = 0; i < headerFileCount; i++) {
+				LOG_INFO("package ID end: " << std::hex << packageIDend);
 				
-				//ifs.seekg(tempLoc, SEEK_SET);
-				//char* thing = (char*)malloc(4);
-				//ifs.read(thing, 4);
-				//LOG_INFO("type: " << thing);
+				
+				ifs.read(reinterpret_cast<char*>(&files[i].type), 4);
+				ifs.read(reinterpret_cast<char*>(&files[i].offset), 4);
+				ifs.read(reinterpret_cast<char*>(&files[i].size), 4);
+				ifs.read(reinterpret_cast<char*>(&files[i].magic), 4);
+				LOG_INFO("file offset " << std::hex << ifs.tellg() << std::dec << " file: " << i << " type: " << std::hex << files[i].type << " offset: " << files[i].offset << " size: " << files[i].size);
 
-				ifs.read(reinterpret_cast<char*>(&files[i].type), sizeof(files[i].type));
-				ifs.read(reinterpret_cast<char*>(&files[i].offset), sizeof(files[i].offset));
-				ifs.read(reinterpret_cast<char*>(&files[i].size), sizeof(files[i].size));
-				ifs.read(reinterpret_cast<char*>(&files[i].magic), sizeof(files[i].magic));
-				LOG_INFO("file offset " << ifs.tellg() << std::dec << " file: " << i << " type: " << std::hex << files[i].type << " offset: " << files[i].offset << " size: " << files[i].size);
-
-
+				
 			}
 			free(files);
 		}
