@@ -168,31 +168,39 @@ void atxToTga(char* fileIn, char* fileOut) {
 	tgaHeader.width = (uint16_t)width;
 	tgaHeader.height = (uint16_t)height;
 	tgaHeader.depth = (uint8_t)8;
-	tgaHeader.imageDescriptor = (uint8_t)0;
-
-	FILE* fpo;
-	fpo = fopen(fileOut, "wb");
+	tgaHeader.imageDescriptor = (uint8_t)0;*/
+	FILE* fpoH;
+	char tmp[180];
+	snprintf(&tmp, 180, "%s%s", fileOut, ".HEADER");
+	fpoH = fopen(tmp, "wb");
+	FILE* fpoD;
+	fpoD = fopen(fileOut, "wb");
 	//read data into fileData
 	printf("saving data from file %s into the archive\n", fileOut);
 	printf("datasize: %d\n", dataSize);
-	printf("header size: %d\n", sizeof(struct TGAHEADER));
-	fwrite(&tgaHeader, sizeof(struct TGAHEADER), 1, fpo);
 	fseek(fpi, headerSize, SEEK_SET);
 	for (int i = 0; i < dataSize; i++) {
 		char temp;
 		fread(&temp, sizeof(char), 1, fpi);
-		fwrite(&temp, sizeof(char), 1, fpo);
+		fwrite(&temp, sizeof(char), 1, fpoD);
+	}
+	fseek(fpi, 0, SEEK_SET);
+	for (int i = 0; i < headerSize; i++) {
+		char temp;
+		fread(&temp, sizeof(char), 1, fpi);
+		fwrite(&temp, sizeof(char), 1, fpoH);
 	}
 	
-	fclose(fpo);
-	fclose(fpi);*/
+	fclose(fpoH);
+	fclose(fpoD);
+	fclose(fpi);
 
 	//free(fileData);
 }
 
 int main(void) {
 	//humanize("C:/dev/groove-coaster-modding/ALAR_decode_encode/unpacked/Stage00951.aar/ac_plotmgc_hard.dat", "./humanized/ac_plotmgc_hard.txt");
-	atxToTga("C:/Users/Frain_Breezee/Downloads/Aqualead_LZSS/out_acid2_start.atx", "./humanized/acid2_start.tga");
+	atxToTga("C:/Users/Frain_Breezee/Downloads/Aqualead_LZSS/out_SeTexture/SeTexture.atx", "./humanized/SeTexture.raw");
 
 	return 0;
 }

@@ -429,15 +429,37 @@ void pack(uint32_t songID, char* directoryIn, char* fileOut) {
     fclose(fp);
 }
 
-int main(void) {
+int main( int argc, char *argv[]) {
+    for (int a = 0; a < argc; a++) {
+        printf("%s\n", argv[a]);
+    }
+    if (argc == 4 || argc == 5) {
+        if (strstr(&argv[2], "unpack") && argc == 4) {
+            printf("unpacking...");
+            unpack(&argv[3], &argv[4]);
+        }
+        else if (strstr(&argv[2], "pack") && argc == 5) {
+            printf("packing...");
+            pack(&argv[3], &argv[4], &argv[5]);
+        }
+        else {
+            goto fail;
+        }
+    }
+    else {
+fail:
+        printf("you did not supply the correct arguments\n"
+               "    unpack: path-to-file-in, path-to-folder-out\n"
+               "    pack: song ID, path-to-folder-in, path-to-file-out");
+    }
     //unpack("./packed_in/Stage00951.aar", "./unpacked/Stage00951.aar/");
     //unpack_dir("./packed_in/", "./unpacked/");
-    printf("\n\n\n\n\n\n\n\n\n\n\n\n\n");
+    //printf("\n\n\n\n\n\n\n\n\n\n\n\n\n");
     //pack(951, "./unpacked/Stage00951.aar/", "D:/games/Groove Coaster for Steam/Data/Stage00951.aar");
     //unpack();
 
     //unpack("C:/dev/groove-coaster-modding/ALAR_decode_encode/packed_in/TableEtc.aar", "C:/dev/out/");
-    unpack("C:/dev/out/HomeMenu.aar", "C:/dev/out/New folder/");
+    //unpack("C:/Users/Frain_Breezee/Downloads/Aqualead_LZSS/out_SeTexture.aar", "C:/Users/Frain_Breezee/Downloads/Aqualead_LZSS/out_SeTexture/");
     
 
     return 0;
