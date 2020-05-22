@@ -6,6 +6,11 @@
 #include <Windows.h>
 #include <iomanip>
 
+extern "C" {
+#include "aqualead_LZSS/aqualead_LZSS.h"
+}
+
+
 //define logging type
 #ifdef NDEBUG
 #define RELEASE
@@ -106,6 +111,9 @@ bool fileExists(fs::path filePath) {
 bool directoryExists(std::string directoryPath) {
 	return (fs::is_directory(directoryPath)) ? true : false;
 }
+bool directoryExists(fs::path directoryPath) {
+	return (fs::is_directory(directoryPath)) ? true : false;
+}
 
 bool updateGamePath(std::string gamePath) {
 	LOG_ERROR("NOT YET IMPLEMENTED");
@@ -202,15 +210,22 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 	return true;
 }
 
+bool ALLZ_dir(fs::path directory) {
+	for (auto& p : fs::directory_iterator(directory)) {
+		main_LZSS((char*)p.path().string().c_str(), (char*)p.path().string().c_str());
+	}
+	return true;
+}
+
 bool unpackGameData(void) {
 	std::string dataDir = gameDir + "Data/";
 	for (auto& p : fs::directory_iterator(dataDir)) {
 		//creating a directory for the files to reside in.
-		LOG_INFO("Unpacking " << p.path());
+		LOG_MANDATORY("Unpacking " << p.path());
 		fs::path fileIn = p.path();
 		
 
-		std::ifstream ifs(fileIn);
+		std::ifstream ifs(fileIn, std::ios::binary);
 
 		if (!ifs.bad()) {
 			char inFileTypeName[5] = "TEST";
@@ -223,9 +238,15 @@ bool unpackGameData(void) {
 				newDir /= fileIn.filename();
 				fs::create_directory(newDir);
 				ALAR_unpack(fileIn.parent_path() /= fileIn.filename(), newDir);
+
+				ALLZ_dir(newDir);
 			}
 			else if ((std::string)inFileTypeName == "ALLZ") {
 				//un-allz the thing, and dump the result directly into the unpacked dir
+				fs::path newFile = unpackedDir;
+				newFile /= fileIn.filename();
+				fs::path tmp = (fileIn.parent_path() /= fileIn.filename());
+				main_LZSS((char*)tmp.string().c_str(), (char*)newFile.string().c_str());
 			}
 			else {
 				//probably already decoded or raw data, just copy them over
@@ -242,6 +263,8 @@ bool unpackGameData(void) {
 
 	return true;
 }
+
+
 
 int main(int argc, char* argv[]) {
 	argvv[1] = argv[1];
