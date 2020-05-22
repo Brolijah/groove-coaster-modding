@@ -61,7 +61,7 @@ namespace fs = std::filesystem;
 char* argvv[16];
 
 std::string gameDir = "D:/games/Groove Coaster for Steam/";
-std::string unpackedDir = "D:/games/groove_coaster_unpacked";
+std::string unpackedDir = "D:/games/groove_coaster_unpacked/";
 
 
 /* getting all things in directory:
@@ -118,6 +118,27 @@ bool directoryExists(fs::path directoryPath) {
 bool updateGamePath(std::string gamePath) {
 	LOG_ERROR("NOT YET IMPLEMENTED");
 	return false;
+}
+
+
+bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
+	std::ifstream ifs(fileIn, std::ios::binary);
+	ifs.seekg(0, std::ios::end);
+	int fileSize = ifs.tellg();
+	ifs.seekg(0, std::ios::beg);
+
+	std::vector<char> fileBuffer(fileSize);
+	ifs.read(fileBuffer.data(), fileSize);
+	LOG_EXTRA("writing to filePath " << fileOut);
+	if (fileExists(fileOut)) {
+		LOG_EXTRA("file already exists, so we will overwrite it");
+		fs::remove(fileOut);
+	}
+	std::ofstream ofs(fileOut, std::ios::binary);
+	ofs.write(fileBuffer.data(), fileSize);
+	ofs.close();
+
+	ifs.close();
 }
 
 
@@ -247,6 +268,39 @@ bool unpackGameData(void) {
 				newFile /= fileIn.filename();
 				fs::path tmp = (fileIn.parent_path() /= fileIn.filename());
 				main_LZSS((char*)tmp.string().c_str(), (char*)newFile.string().c_str());
+
+
+				std::ifstream ifs(newFile, std::ios::binary);
+				if (!ifs.bad()) {
+					char inFileTypeName2[5] = "TEST";
+					ifs.read(inFileTypeName2, sizeof(char) * 4);
+					ifs.close();
+					LOG_INFO(inFileTypeName2);
+					if ((std::string)inFileTypeName2 == "ALAR") {
+						fs::path newDir = unpackedDir;
+
+						newDir /= fileIn.filename();
+						LOG_EXTRA("newDir: " << newDir);
+
+						fs::path tmpName = unpackedDir;
+						tmpName /= fileIn.filename() += ".TEMP";
+						fs::rename(newDir, tmpName);
+
+						try { fs::create_directory(newDir); }
+						catch (fs::filesystem_error& e) {
+							LOG_ERROR(e.what());
+						}
+
+						ALAR_unpack(tmpName, newDir);
+						LOG_EXTRA("tmpName: " << tmpName);
+						fs::remove(tmpName);
+
+						ALLZ_dir(newDir);
+					}
+				}
+
+				
+
 			}
 			else {
 				//probably already decoded or raw data, just copy them over
@@ -269,8 +323,12 @@ bool unpackGameData(void) {
 int main(int argc, char* argv[]) {
 	argvv[1] = argv[1];
 
-
-	unpackGameData();
+	fs::path to_linklink_atx = unpackedDir;
+	to_linklink_atx /= "TitleLarge.aar/LINK_LINK_FEVER_01.atx";
+	fs::path to_linklink_tga = unpackedDir;
+	to_linklink_tga /= "temp/LINK_LINK_FEVER_01.tga";
+	ALTX_unpack(to_linklink_atx, to_linklink_tga);
+	//unpackGameData();
 	
 
 	return 0;
