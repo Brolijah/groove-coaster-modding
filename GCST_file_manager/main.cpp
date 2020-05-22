@@ -55,6 +55,10 @@ bool fileExists(std::string filePath){
 	std::ifstream test(filePath);
 	return (test) ? true : false;
 }
+bool fileExists(fs::path filePath) {
+	std::ifstream test(filePath);
+	return (test) ? true : false;
+}
 
 bool directoryExists(std::string directoryPath) {
 	return (fs::is_directory(directoryPath)) ? true : false;
@@ -66,6 +70,73 @@ bool updateGamePath(std::string gamePath) {
 }
 
 
+struct HEADERFILEENTRY {
+	uint32_t type;
+	uint32_t offset;
+	uint32_t size;
+	uint32_t magic;
+	uint8_t name[0x20];
+};
+
+bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
+	if (fileExists(fileIn)) {
+		std::ifstream ifs(fileIn);
+		fs::path infoFile = dirOut;
+		infoFile /= "PACKAGE_INFO.txt";
+		std::ofstream ofs(infoFile);
+
+		ifs.seekg(4, SEEK_SET);
+		char headerID;
+		ifs.read(&headerID, 1);
+		ifs.seekg(6, SEEK_SET); //skip the magical 0x61 number
+		uint16_t headerFileCount;
+		ifs.read(reinterpret_cast<char*>(&headerFileCount), sizeof(headerFileCount)); //stored fucking oddly. 0x83 indicates 83 files, not 131 as you would expect.
+		//headerFileCount = ((headerFileCount & 0xFF00) >> 8) ^ ((headerFileCount & 0x00FF) << 8);
+		LOG_INFO("Files in archive: " << std::dec << (unsigned int)headerFileCount);
+
+		uint32_t packageID;
+		uint32_t packageIDend;
+		
+		if (headerID == 2) {
+
+			ifs.seekg(0, SEEK_END);
+			LOG_ERROR(std::dec << ifs.tellg());
+
+			LOG_INFO("Files in archive: " << (unsigned int)headerFileCount);
+			struct HEADERFILEENTRY* files = (struct HEADERFILEENTRY*)malloc(headerFileCount * sizeof(struct HEADERFILEENTRY));
+			ifs.seekg(8, SEEK_SET);
+			ifs.read(reinterpret_cast<char*>(&packageID), sizeof(packageID));
+			ifs.read(reinterpret_cast<char*>(&packageIDend), sizeof(packageIDend));
+			
+			int64_t tempLoc = ifs.tellg();
+			for (int i = 0; i < headerFileCount; i++) {
+				
+				//ifs.seekg(tempLoc, SEEK_SET);
+				//char* thing = (char*)malloc(4);
+				//ifs.read(thing, 4);
+				//LOG_INFO("type: " << thing);
+
+				ifs.read(reinterpret_cast<char*>(&files[i].type), sizeof(files[i].type));
+				ifs.read(reinterpret_cast<char*>(&files[i].offset), sizeof(files[i].offset));
+				ifs.read(reinterpret_cast<char*>(&files[i].size), sizeof(files[i].size));
+				ifs.read(reinterpret_cast<char*>(&files[i].magic), sizeof(files[i].magic));
+				LOG_INFO("file offset " << ifs.tellg() << std::dec << " file: " << i << " type: " << std::hex << files[i].type << " offset: " << files[i].offset << " size: " << files[i].size);
+
+
+			}
+			free(files);
+		}
+		
+		
+
+		ifs.close();
+		ofs.close();
+	}
+	else {
+		return false;
+	}
+	return true;
+}
 
 bool unpackGameData(void) {
 	std::string dataDir = gameDir + "Data/";
@@ -80,12 +151,14 @@ bool unpackGameData(void) {
 		if (!ifs.bad()) {
 			char inFileTypeName[5] = "TEST";
 			ifs.read(inFileTypeName, sizeof(char) * 4);
+			ifs.close();
 			LOG_INFO(inFileTypeName);
 			if ((std::string)inFileTypeName == "ALAR") {
 				//do alar stuff, and put the files into a directory with the name of the original archive
 				fs::path newDir = unpackedDir;
 				newDir /= fileIn.filename();
 				fs::create_directory(newDir);
+				ALAR_unpack(fileIn.parent_path() /= fileIn.filename(), newDir);
 			}
 			else if ((std::string)inFileTypeName == "ALLZ") {
 				//un-allz the thing, and dump the result directly into the unpacked dir
@@ -94,6 +167,9 @@ bool unpackGameData(void) {
 				//probably already decoded or raw data, just copy them over
 				fs::path newFile = unpackedDir;
 				newFile /= fileIn.filename();
+				if (fileExists(newFile)) {
+					fs::remove(newFile);
+				}
 				fs::copy_file(fileIn, newFile);
 			}
 		}
@@ -105,6 +181,7 @@ bool unpackGameData(void) {
 
 int main(int argc, char* argv[]) {
 	argvv[1] = argv[1];
+
 
 	unpackGameData();
 	
