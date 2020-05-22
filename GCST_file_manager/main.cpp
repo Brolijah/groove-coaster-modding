@@ -5,8 +5,42 @@
 #include <filesystem>
 #include <Windows.h>
 
-#define LOG_ERROR(x) std::cout << std::dec << "ERROR: "<< x << std::endl;
-#define LOG_INFO(x) std::cout << std::dec <<  "INFO:  "<< x << std::endl;
+//define logging type
+#ifdef NDEBUG
+#define RELEASE
+#endif
+#ifdef _DEBUG
+#define VERBOSE
+#endif
+
+#ifdef RELEASE
+#define _LOG_MANDATORY
+#define _LOG_ERROR
+#endif
+#ifdef DEBUG
+#define _LOG_MANDATORY
+#define _LOG_ERROR
+#define _LOG_INFO
+#endif
+#ifdef VERBOSE
+#define _LOG_MANDATORY
+#define _LOG_ERROR
+#define _LOG_INFO
+#define _LOG_EXTRA
+#endif
+
+#ifdef _LOG_MANDATORY
+#define LOG_MANDATORY(x) std::cout << std::dec <<  "SYSTEM : " << x << std::endl;
+#endif
+#ifdef _LOG_ERROR
+#define LOG_ERROR(x) std::cout << std::dec <<      "ERROR  : " << x << std::endl;
+#endif
+#ifdef _LOG_INFO
+#define LOG_INFO(x) std::cout << std::dec <<       "INFO   : " << x << std::endl;
+#endif
+#ifdef _LOG_EXTRA
+#define LOG_EXTRA(x) std::cout << std::dec <<      "VERBOSE: " << x << std::endl;
+#endif
 
 namespace fs = std::filesystem;
 
@@ -80,7 +114,7 @@ struct HEADERFILEENTRY {
 
 bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 	if (fileExists(fileIn)) {
-		std::ifstream ifs(fileIn);
+		std::ifstream ifs(fileIn, std::ios::binary | std::ios::ate);
 		fs::path infoFile = dirOut;
 		infoFile /= "PACKAGE_INFO.txt";
 		std::ofstream ofs(infoFile);
@@ -91,34 +125,39 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 		ifs.seekg(6, SEEK_SET); //skip the magical 0x61 number
 		uint16_t headerFileCount;
 		ifs.read(reinterpret_cast<char*>(&headerFileCount), sizeof(headerFileCount)); //stored fucking oddly. 0x83 indicates 83 files, not 131 as you would expect.
-		//headerFileCount = ((headerFileCount & 0xFF00) >> 8) ^ ((headerFileCount & 0x00FF) << 8);
 		LOG_INFO("Files in archive: " << std::dec << (unsigned int)headerFileCount);
 
 		uint32_t packageID;
 		uint32_t packageIDend;
 		
 		if (headerID == 2) {
-
-			ifs.seekg(0, SEEK_END);
-			LOG_ERROR(std::dec << ifs.tellg());
+			
+			ifs.seekg(0, std::ios::end);
 
 			LOG_INFO("Files in archive: " << std::hex << (unsigned int)headerFileCount);
 			struct HEADERFILEENTRY* files = (struct HEADERFILEENTRY*)malloc(headerFileCount * sizeof(struct HEADERFILEENTRY));
-			ifs.seekg(8, SEEK_SET);
+			ifs.seekg(8, std::ios::beg);
 			ifs.read(reinterpret_cast<char*>(&packageID), sizeof(packageID));
 			ifs.read(reinterpret_cast<char*>(&packageIDend), sizeof(packageIDend));
 			
 			int64_t tempLoc = ifs.tellg();
 			for (int i = 0; i < headerFileCount; i++) {
-				LOG_INFO("package ID end: " << std::hex << packageIDend);
-				
-				
+				//getting stuff from header
 				ifs.read(reinterpret_cast<char*>(&files[i].type), 4);
 				ifs.read(reinterpret_cast<char*>(&files[i].offset), 4);
 				ifs.read(reinterpret_cast<char*>(&files[i].size), 4);
 				ifs.read(reinterpret_cast<char*>(&files[i].magic), 4);
-				LOG_INFO("file offset " << std::hex << ifs.tellg() << std::dec << " file: " << i << " type: " << std::hex << files[i].type << " offset: " << files[i].offset << " size: " << files[i].size);
+				
+				//getting the file name
+				char fileName[] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; //the last char is 0x00 this way
+				int tempPos = ifs.tellg();
+				ifs.seekg(files[i].offset - 0x22, std::ios::beg);
+				ifs.read(reinterpret_cast<char*>(&fileName), sizeof(fileName)-1);
+				LOG_EXTRA("current file: " << fileName << "  header offset: " << std::hex << ifs.tellg() << std::dec << "  file: " << i << "  type: " << std::hex << files[i].type << "  offset: " << files[i].offset << "  size: " << files[i].size);
+				ifs.seekg(tempPos, std::ios::beg);
 
+
+				//std::vector<char> fileBuffer(files[i].size)
 				
 			}
 			free(files);
