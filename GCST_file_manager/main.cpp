@@ -4,6 +4,7 @@
 #include <sstream>
 #include <filesystem>
 #include <Windows.h>
+#include <iomanip>
 
 //define logging type
 #ifdef NDEBUG
@@ -31,15 +32,23 @@
 
 #ifdef _LOG_MANDATORY
 #define LOG_MANDATORY(x) std::cout << std::dec <<  "SYSTEM : " << x << std::endl;
+#else
+#define LOG_MANDATORY(x)
 #endif
 #ifdef _LOG_ERROR
 #define LOG_ERROR(x) std::cout << std::dec <<      "ERROR  : " << x << std::endl;
+#else
+#define LOG_ERROR(x)
 #endif
 #ifdef _LOG_INFO
 #define LOG_INFO(x) std::cout << std::dec <<       "INFO   : " << x << std::endl;
+#else
+#define LOG_INFO(x)
 #endif
 #ifdef _LOG_EXTRA
 #define LOG_EXTRA(x) std::cout << std::dec <<      "VERBOSE: " << x << std::endl;
+#else
+#define LOG_EXTRA(x)
 #endif
 
 namespace fs = std::filesystem;
@@ -109,12 +118,12 @@ struct HEADERFILEENTRY {
 	uint32_t offset;
 	uint32_t size;
 	uint32_t magic;
-	uint8_t name[0x20];
+	uint8_t name[0x21]; //add a last byte to act as terminator
 };
 
 bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 	if (fileExists(fileIn)) {
-		std::ifstream ifs(fileIn, std::ios::binary | std::ios::ate);
+		std::ifstream ifs(fileIn, std::ios::binary);
 		fs::path infoFile = dirOut;
 		infoFile /= "PACKAGE_INFO.txt";
 		std::ofstream ofs(infoFile);
@@ -140,6 +149,8 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 			ifs.read(reinterpret_cast<char*>(&packageID), sizeof(packageID));
 			ifs.read(reinterpret_cast<char*>(&packageIDend), sizeof(packageIDend));
 			
+			ofs << "PACKAGEID:0x" << std::hex << packageID << "|PACKAGEIDEND:0x" << packageIDend << std::dec << std::endl;
+
 			int64_t tempLoc = ifs.tellg();
 			for (int i = 0; i < headerFileCount; i++) {
 				//getting stuff from header
@@ -149,16 +160,33 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 				ifs.read(reinterpret_cast<char*>(&files[i].magic), 4);
 				
 				//getting the file name
-				char fileName[] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; //the last char is 0x00 this way
+				//char fileName[] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; //the last char is 0x00 this way
 				int tempPos = ifs.tellg();
+				files[i].name[sizeof(files[i].name)] = '\x0';
 				ifs.seekg(files[i].offset - 0x22, std::ios::beg);
-				ifs.read(reinterpret_cast<char*>(&fileName), sizeof(fileName)-1);
-				LOG_EXTRA("current file: " << fileName << "  header offset: " << std::hex << ifs.tellg() << std::dec << "  file: " << i << "  type: " << std::hex << files[i].type << "  offset: " << files[i].offset << "  size: " << files[i].size);
-				ifs.seekg(tempPos, std::ios::beg);
-
-
-				//std::vector<char> fileBuffer(files[i].size)
+				ifs.read(reinterpret_cast<char*>(files[i].name), sizeof(files[i].name)-1);
+				LOG_EXTRA("current file: " << files[i].name << "  header offset: " << std::hex << ifs.tellg() << std::dec << "  file: " << i << "  type: " << std::hex << files[i].type << "  offset: " << files[i].offset << "  size: " << files[i].size);
 				
+				//dumping file
+				ifs.seekg(files[i].offset, std::ios::beg);
+				std::vector<char> fileBuffer(files[i].size);
+				ifs.read(fileBuffer.data(), files[i].size);
+				fs::path fileOut = dirOut;
+				fileOut /= (char*)files[i].name;
+				LOG_EXTRA("writing to filePath " << fileOut);
+				if (fileExists(fileOut)) {
+					LOG_EXTRA("file already exists, so we will overwrite it");
+					fs::remove(fileOut);
+				}
+				std::ofstream fOut(fileOut, std::ios::binary | std::ios::ate);
+				fOut.write(fileBuffer.data(), files[i].size);
+				fOut.close();
+
+				//adding metadata to PACKAGE_INFO.txt
+				ofs << "TYPE:0x" << std::setw(8) << std::hex << files[i].type << std::dec << "|NAME:" << files[i].name << std::endl;
+
+
+				ifs.seekg(tempPos, std::ios::beg);
 			}
 			free(files);
 		}
