@@ -60,9 +60,15 @@ namespace fs = std::filesystem;
 
 char* argvv[16];
 
-std::string gameDir = "D:/games/Groove Coaster for Steam/";
-std::string unpackedDir = "D:/games/groove_coaster_unpacked/";
+std::string gameDir = "D:\\games\\Groove Coaster for Steam\\";
+std::string unpackedDir = "D:\\games\\groove_coaster_unpacked\\";
 
+struct RGBA {
+	char R;
+	char G;
+	char B;
+	char A;
+};
 
 /* getting all things in directory:
 for (auto& p : fs::directory_iterator("."))
@@ -127,20 +133,131 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 	int fileSize = ifs.tellg();
 	ifs.seekg(0, std::ios::beg);
 
-	std::vector<char> fileBuffer(fileSize);
-	ifs.read(fileBuffer.data(), fileSize);
-	LOG_EXTRA("writing to filePath " << fileOut);
-	if (fileExists(fileOut)) {
-		LOG_EXTRA("file already exists, so we will overwrite it");
-		fs::remove(fileOut);
+	char magic[5] = "NONE";
+	ifs.read(reinterpret_cast<char*>(&magic), 4);
+	LOG_EXTRA("magic: " << magic);
+	if ((std::string)magic == "ALTX") {
+		
+
+		while ((std::string)magic != "ALIG") { //loop until we find the ALIG
+			ifs.read(reinterpret_cast<char*>(&magic), 4);
+		}
+		ifs.seekg(4, std::ios::cur);
+		ifs.read(reinterpret_cast<char*>(&magic), 4); //read if it's palletted or not
+		char magic2[5] = "NONE";
+		ifs.read(reinterpret_cast<char*>(&magic2), 4); //read if it's RGBA or whatever
+
+		uint32_t width;
+		uint32_t height;
+		ifs.read(reinterpret_cast<char*>(&width), 4);
+		ifs.read(reinterpret_cast<char*>(&height), 4);
+		LOG_EXTRA("image width: " << width << "  image height: " << height << "  palette (if any): " << magic);
+		
+		ifs.seekg(8, std::ios::cur); //skip two random values of which I don't know what they do yet
+		struct RGBA* image = (struct RGBA*)malloc(width * height * 4);
+		if ((std::string)magic == "PAL8") { //8-bit palette
+			//8-bit, so 256 entries, so 1024 bytes
+			struct RGBA* palette = (struct RGBA*)malloc(1024);
+			if ((std::string)magic2 == "RGBA") {
+				for (int i = 0; i < 256; i++) {
+					ifs.read(&palette[i].R, 1);
+					ifs.read(&palette[i].G, 1);
+					ifs.read(&palette[i].B, 1);
+					ifs.read(&palette[i].A, 1);
+				}
+			}
+			else {
+				LOG_ERROR("unknown color format");
+			}
+			
+			//now turn the image itself into normal RGBA
+			for (int i = 0; i < (width * height); i++) {
+				uint8_t tmp;
+				ifs.read(reinterpret_cast<char*>(&tmp), 1);
+				image[i].R = palette[tmp].R;
+				image[i].G = palette[tmp].G;
+				image[i].B = palette[tmp].B;
+				image[i].A = palette[tmp].A;
+			}
+			free(palette);
+		}
+		else if ((std::string)magic == "RGBA") {
+			for (int i = 0; i < (width * height); i++) {
+				ifs.read(&image[i].R, 1);
+				ifs.read(&image[i].G, 1);
+				ifs.read(&image[i].B, 1);
+				ifs.read(&image[i].A, 1);
+			}
+		}
+		else if ((std::string)magic == "BGRA") {
+			for (int i = 0; i < (width * height); i++) {
+				ifs.read(&image[i].B, 1);
+				ifs.read(&image[i].G, 1);
+				ifs.read(&image[i].R, 1);
+				ifs.read(&image[i].A, 1);
+			}
+		}
+		else {
+			LOG_ERROR("unknown pallette format");
+		}
+
+		
+
+		//deleting file if it exists
+		LOG_EXTRA("writing to filePath " << fileOut);
+		if (fileExists(fileOut)) {
+			LOG_EXTRA("file already exists, so we will overwrite it");
+			fs::remove(fileOut);
+		}
+
+		std::ofstream ofs(fileOut, std::ios::binary);
+
+		//PAM-ifying file
+		ofs << "P7" << '\n';
+		ofs << "WIDTH " << width << '\n';
+		ofs << "HEIGHT " << height << '\n';
+		ofs << "DEPTH 4\n";
+		ofs << "MAXVAL 255\n";
+		ofs << "TUPLTYPE RGBA_ALPHA\n";
+		ofs << "ENDHDR\n";
+
+		for (int i = 0; i < (width * height); i++) {
+			ofs.write(&image[i].R, 1);
+			ofs.write(&image[i].G, 1);
+			ofs.write(&image[i].B, 1);
+			ofs.write(&image[i].A, 1);
+		}
+		ofs.close();
+		free(image);
 	}
-	std::ofstream ofs(fileOut, std::ios::binary);
-	ofs.write(fileBuffer.data(), fileSize);
-	ofs.close();
+	else {
+		LOG_INFO("Supplied file is not an ALTX file");
+		return false;
+	}
+
+
+	
 
 	ifs.close();
-}
 
+	return true;
+}
+bool ALTX_unpack_dir(fs::path directory) {
+	for (auto& p : fs::directory_iterator(directory)) {
+		fs::path out = p.path().parent_path();
+		std::string tmpstr = p.path().stem().string();
+		tmpstr += ".pam";
+		out /= tmpstr;
+		try {
+			ALTX_unpack(p.path(), out);
+		}
+		catch (fs::filesystem_error& e){
+			LOG_ERROR("(in ALTX_unpack_dir) " << e.what());
+			system("PAUSE");
+		}
+	}
+	return true;
+}
 
 struct HEADERFILEENTRY {
 	uint32_t type;
@@ -261,6 +378,7 @@ bool unpackGameData(void) {
 				ALAR_unpack(fileIn.parent_path() /= fileIn.filename(), newDir);
 
 				ALLZ_dir(newDir);
+				//ALTX_unpack_dir(newDir);
 			}
 			else if ((std::string)inFileTypeName == "ALLZ") {
 				//un-allz the thing, and dump the result directly into the unpacked dir
@@ -299,6 +417,7 @@ bool unpackGameData(void) {
 					}
 				}
 
+				//ALTX_unpack_dir(tmp);
 				
 
 			}
@@ -310,6 +429,8 @@ bool unpackGameData(void) {
 					fs::remove(newFile);
 				}
 				fs::copy_file(fileIn, newFile);
+
+				//ALTX_unpack(newFile, newFile);
 			}
 		}
 	}
@@ -325,9 +446,18 @@ int main(int argc, char* argv[]) {
 
 	fs::path to_linklink_atx = unpackedDir;
 	to_linklink_atx /= "TitleLarge.aar/LINK_LINK_FEVER_01.atx";
-	fs::path to_linklink_tga = unpackedDir;
-	to_linklink_tga /= "temp/LINK_LINK_FEVER_01.tga";
-	ALTX_unpack(to_linklink_atx, to_linklink_tga);
+	fs::path to_linklink_pam = unpackedDir;
+	to_linklink_pam /= "temp/LINK_LINK_FEVER_01.pam";
+
+	fs::path to_atx = unpackedDir;
+	to_atx /= "Avatar.aar/AvatarTexture.atx";
+	fs::path to_pam = unpackedDir;
+	to_pam /= "temp/AvatarTexture.pam";
+	//ALTX_unpack(to_atx, to_pam);
+
+	fs::path to_atx_ = unpackedDir;
+	to_atx_ /= "NavigatorTexture.aar";
+	ALTX_unpack_dir(to_atx_);
 	//unpackGameData();
 	
 
