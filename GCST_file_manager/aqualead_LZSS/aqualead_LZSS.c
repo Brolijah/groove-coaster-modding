@@ -20,11 +20,11 @@ int main_LZSS(char* pathIn, char* pathOut)
     size_t decret;
     const char* outfile_name = NULL;
 
-    printf("\n"
+    /*printf("\n"
            "===========================\n"
            "|| Aqualead LZSS Decoder ||\n"
            "===========================\n"
-           "       Written by Brolijah.\n");
+           "       Written by Brolijah.\n");*/
 
     if(0) // No input and/or output path specified
     {

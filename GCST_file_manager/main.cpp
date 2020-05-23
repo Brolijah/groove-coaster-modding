@@ -62,6 +62,8 @@ char* argvv[16];
 
 std::string gameDir = "D:\\games\\Groove Coaster for Steam\\";
 std::string unpackedDir = "D:\\games\\groove_coaster_unpacked\\";
+std::string repackedDir = "D:\\games\\groove Coaster for Steam - Repacked\\Data\\";
+
 
 struct RGBA {
 	char R;
@@ -123,6 +125,7 @@ bool directoryExists(fs::path directoryPath) {
 
 bool updateGamePath(std::string gamePath) {
 	LOG_ERROR("NOT YET IMPLEMENTED");
+	//temp
 	return false;
 }
 
@@ -130,7 +133,7 @@ bool updateGamePath(std::string gamePath) {
 bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 	std::ifstream ifs(fileIn, std::ios::binary);
 	ifs.seekg(0, std::ios::end);
-	int fileSize = ifs.tellg();
+	std::streamoff fileSize = ifs.tellg();
 	ifs.seekg(0, std::ios::beg);
 
 	char magic[5] = "NONE";
@@ -154,7 +157,7 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 		LOG_EXTRA("image width: " << width << "  image height: " << height << "  palette (if any): " << magic);
 		
 		ifs.seekg(8, std::ios::cur); //skip two random values of which I don't know what they do yet
-		struct RGBA* image = (struct RGBA*)malloc(width * height * 4);
+		struct RGBA* image = (struct RGBA*)malloc((uint64_t)width * (uint64_t)height * 4);
 		if ((std::string)magic == "PAL8") { //8-bit palette
 			//8-bit, so 256 entries, so 1024 bytes
 			struct RGBA* palette = (struct RGBA*)malloc(1024);
@@ -171,7 +174,7 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 			}
 			
 			//now turn the image itself into normal RGBA
-			for (int i = 0; i < (width * height); i++) {
+			for (unsigned int i = 0; i < (width * height); i++) {
 				uint8_t tmp;
 				ifs.read(reinterpret_cast<char*>(&tmp), 1);
 				image[i].R = palette[tmp].R;
@@ -182,7 +185,7 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 			free(palette);
 		}
 		else if ((std::string)magic == "RGBA") {
-			for (int i = 0; i < (width * height); i++) {
+			for (unsigned int i = 0; i < (width * height); i++) {
 				ifs.read(&image[i].R, 1);
 				ifs.read(&image[i].G, 1);
 				ifs.read(&image[i].B, 1);
@@ -190,7 +193,7 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 			}
 		}
 		else if ((std::string)magic == "BGRA") {
-			for (int i = 0; i < (width * height); i++) {
+			for (unsigned int i = 0; i < (width * height); i++) {
 				ifs.read(&image[i].B, 1);
 				ifs.read(&image[i].G, 1);
 				ifs.read(&image[i].R, 1);
@@ -221,7 +224,7 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 		ofs << "TUPLTYPE RGBA_ALPHA\n";
 		ofs << "ENDHDR\n";
 
-		for (int i = 0; i < (width * height); i++) {
+		for (unsigned int i = 0; i < (width * height); i++) {
 			ofs.write(&image[i].R, 1);
 			ofs.write(&image[i].G, 1);
 			ofs.write(&image[i].B, 1);
@@ -229,6 +232,8 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 		}
 		ofs.close();
 		free(image);
+		ifs.close();
+		fs::remove(fileIn);
 	}
 	else {
 		LOG_INFO("Supplied file is not an ALTX file");
@@ -243,20 +248,71 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 	return true;
 }
 bool ALTX_unpack_dir(fs::path directory) {
-	for (auto& p : fs::directory_iterator(directory)) {
-		fs::path out = p.path().parent_path();
-		std::string tmpstr = p.path().stem().string();
-		tmpstr += ".pam";
-		out /= tmpstr;
-		try {
-			ALTX_unpack(p.path(), out);
-		}
-		catch (fs::filesystem_error& e){
-			LOG_ERROR("(in ALTX_unpack_dir) " << e.what());
-			system("PAUSE");
+	try {
+		for (auto& p : fs::directory_iterator(directory)) {
+
+			if (fs::is_regular_file(p.path())) {
+				fs::path out = p.path().parent_path();
+				std::string tmpstr = p.path().stem().string();
+				tmpstr += ".pam";
+				out /= tmpstr;
+				try {
+					ALTX_unpack(p.path(), out);
+				}
+				catch (fs::filesystem_error& e) {
+					LOG_ERROR("(in ALTX_unpack_dir) " << e.what());
+					return false;
+				}
+			}
+
 		}
 	}
+	catch (fs::filesystem_error& e) {
+		LOG_ERROR(e.what());
+		return false;
+	}
+	
 	return true;
+}
+bool ALTX_repack_pam(fs::path fileIn, fs::path fileOut) {
+	std::ifstream ifs(fileIn, std::ios::binary);
+	std::string tmp;
+	ifs >> tmp;
+
+	uint32_t height = 0;
+	uint32_t width = 0;
+	uint32_t depth = 0;
+	std::string sType = "";
+	uint32_t maxval = 0;
+
+	//fix this to accept any order, since the file specification allows for that
+	if (tmp == "P7") {
+		while (tmp != "ENDHDR") {
+			ifs >> tmp;
+			if (tmp == "WIDTH")
+				ifs >> width;
+			if (tmp == "HEIGHT")
+				ifs >> height;
+			if (tmp == "DEPTH")
+				ifs >> depth;
+			if (tmp == "MAXVAL")
+				ifs >> maxval;
+			if (tmp == "TUPLTYPE")
+				ifs >> sType;
+		}
+		LOG_INFO("repacking file " << fileIn.filename() << ", width=" << width << " height=" << height << " depth=" << depth << " type=" << sType << " maxval=" << maxval);
+
+
+	}
+	else {
+		LOG_ERROR("input file is not a pam file!")
+	}
+	return true;
+}
+bool ALTX_repack_tga(fs::path fileIn, fs::path fileOut) {
+	LOG_ERROR("not imeplemented");
+	throw("not implemented");
+	//http://paulbourke.net/dataformats/tga/
 }
 
 struct HEADERFILEENTRY {
@@ -295,7 +351,7 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 			ifs.read(reinterpret_cast<char*>(&packageID), sizeof(packageID));
 			ifs.read(reinterpret_cast<char*>(&packageIDend), sizeof(packageIDend));
 			
-			ofs << "PACKAGEID:0x" << std::hex << packageID << "|PACKAGEIDEND:0x" << packageIDend << std::dec << std::endl;
+			ofs << "PACKAGEID: 0x" << std::hex << packageID << " PACKAGEIDEND: 0x" << packageIDend << std::dec << std::endl;
 
 			int64_t tempLoc = ifs.tellg();
 			for (int i = 0; i < headerFileCount; i++) {
@@ -307,7 +363,7 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 				
 				//getting the file name
 				//char fileName[] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; //the last char is 0x00 this way
-				int tempPos = ifs.tellg();
+				std::streamoff tempPos = ifs.tellg();
 				files[i].name[sizeof(files[i].name)] = '\x0';
 				ifs.seekg(files[i].offset - 0x22, std::ios::beg);
 				ifs.read(reinterpret_cast<char*>(files[i].name), sizeof(files[i].name)-1);
@@ -329,7 +385,7 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 				fOut.close();
 
 				//adding metadata to PACKAGE_INFO.txt
-				ofs << "TYPE:0x" << std::setw(8) << std::hex << files[i].type << std::dec << "|NAME:" << files[i].name << std::endl;
+				ofs << "TYPE: 0x" << std::setw(8) << std::hex << files[i].type << std::dec << " NAME: " << files[i].name << std::endl;
 
 
 				ifs.seekg(tempPos, std::ios::beg);
@@ -343,8 +399,55 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 		ofs.close();
 	}
 	else {
+		LOG_ERROR("file " << fileIn << " doesn't exist!");
 		return false;
 	}
+	return true;
+}
+bool ALAR_repack(fs::path dirIn, fs::path fileOut, bool packFilesWithin) {
+
+	std::vector<std::string> filesToBeYeeted;
+
+	fs::path packageInfo = dirIn;
+	packageInfo /= "PACKAGE_INFO.txt";
+	if (fs::is_regular_file(packageInfo)) {
+		LOG_EXTRA("the package info exists for directory " << dirIn);
+		if (packFilesWithin) {
+			for (auto& p : fs::directory_iterator(dirIn)) {
+				LOG_EXTRA("   " << p.path());
+				//LOG_EXTRA("packed file name: " << packedFile);
+
+				if ((p.path().filename().string() != "PACKAGE_INFO.txt") && (p.path().filename().c_str()[0] != '.')) {
+					if (p.path().extension().string() == ".pam") {
+						//ALTX_repack_pam(p.path(), packedFile);
+						//LOG_EXTRA(".pam file!");
+					}
+					if (p.path().extension().string() == ".ogg") {
+						//ALSN_repack
+					}
+					//filesToBeYeeted.push_back(packedFile.string()); //add the temporary packed file to the cleanup list
+					//add more when more filetypes are reverse-engineered
+				}
+			}
+		}
+
+		std::ifstream ifpack(packageInfo);
+		std::string tmp;
+		ifpack >> tmp;
+		if (tmp == "PACKAGEID:") {
+			uint32_t packageID;
+			ifpack >> tmp;
+			sscanf(tmp.c_str(), "%x", packageID);
+			LOG_INFO("packageID: " << packageID);
+		}
+
+	}
+	else {
+		LOG_EXTRA("the package info doesn't exist for directory " << dirIn);
+		return false;
+	}
+
+
 	return true;
 }
 
@@ -374,17 +477,25 @@ bool unpackGameData(void) {
 				//do alar stuff, and put the files into a directory with the name of the original archive
 				fs::path newDir = unpackedDir;
 				newDir /= fileIn.filename();
-				fs::create_directory(newDir);
+				try {
+					fs::create_directory(newDir);
+				}
+				catch (fs::filesystem_error& e) {
+					LOG_ERROR(e.what());
+				}
 				ALAR_unpack(fileIn.parent_path() /= fileIn.filename(), newDir);
 
 				ALLZ_dir(newDir);
-				//ALTX_unpack_dir(newDir);
+				ALTX_unpack_dir(newDir);
 			}
 			else if ((std::string)inFileTypeName == "ALLZ") {
 				//un-allz the thing, and dump the result directly into the unpacked dir
 				fs::path newFile = unpackedDir;
 				newFile /= fileIn.filename();
 				fs::path tmp = (fileIn.parent_path() /= fileIn.filename());
+				if (fs::is_directory(newFile)) {
+					fs::remove_all(newFile);
+				}
 				main_LZSS((char*)tmp.string().c_str(), (char*)newFile.string().c_str());
 
 
@@ -417,7 +528,7 @@ bool unpackGameData(void) {
 					}
 				}
 
-				//ALTX_unpack_dir(tmp);
+				ALTX_unpack_dir(newFile);
 				
 
 			}
@@ -430,7 +541,7 @@ bool unpackGameData(void) {
 				}
 				fs::copy_file(fileIn, newFile);
 
-				//ALTX_unpack(newFile, newFile);
+				ALTX_unpack(newFile, newFile);
 			}
 		}
 	}
@@ -438,7 +549,43 @@ bool unpackGameData(void) {
 
 	return true;
 }
+bool repackGameData(void) {
+	std::string dataOutDir = repackedDir;
+	std::string dataInDir = unpackedDir;
+	if (!fs::is_directory(dataOutDir) || !fs::is_directory(dataInDir)) {
+		LOG_ERROR("one of the supplied directories for repacking is wrong/inaccessible");
+		return false;
+	}
 
+	for (auto& p : fs::directory_iterator(dataInDir)) {
+		//still gotta check what files need to actually be packed, so repacking won't take 5 years
+
+		//check if the file begins with a dot or if it is a package info file, because we want to ignore those
+		if ((p.path().filename().c_str()[0] != '.') && (p.path().filename().string() != "PACKAGE_INFO.txt")) {
+			LOG_EXTRA("the entry " << p.path().filename() << " is not an ignored file");
+
+			if (fs::is_directory(p.path())) {
+				LOG_EXTRA("the entry " << p.path().filename() << " is a directory");
+				fs::path outFile = repackedDir;
+				outFile /= p.path().filename();
+				ALAR_repack(p.path(), outFile, true);
+			}
+			else if (fs::is_regular_file(p.path())) {
+				LOG_EXTRA("the entry " << p.path().filename() << " is a file");
+			}
+			else {
+				LOG_ERROR("this entry somehow doesn't exist");
+			}
+		}
+		else {
+			LOG_EXTRA("the entry " << p.path().filename() << " is an ignored file");
+		}
+		
+	}
+
+
+
+}
 
 
 int main(int argc, char* argv[]) {
@@ -457,9 +604,19 @@ int main(int argc, char* argv[]) {
 
 	fs::path to_atx_ = unpackedDir;
 	to_atx_ /= "NavigatorTexture.aar";
-	ALTX_unpack_dir(to_atx_);
+	//ALTX_unpack_dir(to_atx_);
 	//unpackGameData();
-	
+
+	fs::path outAlar = unpackedDir;
+	outAlar /= "out.aar";
+	ALAR_repack(to_atx_, outAlar, false);
+	//main_LZSS((char*)"D:\\games\\Groove Coaster for Steam\\Data\\NavigatorTexture.aar", (char*)"D:\\games\\groove_coaster_unpacked\\NavigatorTexture.aar\\NavigatorTexture.aar");
+	//repackGameData();
+	fs::path tttt = unpackedDir;
+	tttt /= "NavigatorTexture.aar/NavigatorTexture.pam";
+	fs::path ttttt = unpackedDir;
+	ttttt /= "NavigatorTexture.aar/out_NavigatorTexture.atx";
+	//ALTX_unpack(ttttt, tttt);
 
 	return 0;
 }
