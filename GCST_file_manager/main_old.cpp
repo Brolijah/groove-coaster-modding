@@ -1,3 +1,5 @@
+#ifdef NOPE
+
 #include <iostream>
 #include <fstream>
 #include <string>
@@ -149,6 +151,26 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 	if ((std::string)magic == "ALTX") {
 		
 
+		fs::path infoFilePath = fileIn.parent_path();
+		infoFilePath /= fileIn.stem();
+		infoFilePath += ".HEADER";
+		LOG_EXTRA("infofilepath: " << infoFilePath);
+		std::ofstream infoFile(infoFilePath, std::ios::binary);
+		infoFile.seekp(infoFile.beg);
+		infoFile << fileIn.filename().string();
+		infoFile << " ";
+		std::streamoff tmpLoc = ifs.tellg();
+		ifs.seekg(ifs.beg);
+		char tmpMagic[5] = "NONE";
+		while ((std::string)tmpMagic != "ALIG") {
+			ifs.read(reinterpret_cast<char*>(&tmpMagic), 4);
+			infoFile.write(reinterpret_cast<char*>(&tmpMagic), 4);
+			//LOG_EXTRA("write!");
+		}
+		infoFile.close();
+		ifs.seekg(tmpLoc);
+
+
 		while ((std::string)magic != "ALIG") { //loop until we find the ALIG
 			ifs.read(reinterpret_cast<char*>(&magic), 4);
 		}
@@ -259,6 +281,12 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 }
 bool ALTX_unpack_dir(fs::path directory) {
 	try {
+		//fs::path imageHeaders = directory;
+		//imageHeaders /= "IMAGE_INFO.txt";
+		//if (fs::is_regular_file(imageHeaders)) {
+		//	LOG_EXTRA("removing file " << imageHeaders << " because we're unpacking the entire directory");
+		//	fs::remove(imageHeaders);
+		//}
 		for (auto& p : fs::directory_iterator(directory)) {
 
 			if (fs::is_regular_file(p.path())) {
@@ -402,7 +430,7 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 				fOut.close();
 
 				//adding metadata to PACKAGE_INFO.txt
-				ofs << "TYPE: 0x" << std::setw(8) << std::setfill('0') << std::hex << files[i].type << std::dec << " NAME: " << files[i].name << std::endl;
+				ofs << "TYPE: 0x" << std::setw(8) << std::setfill('0') << std::hex << files[i].type << std::dec << " NAME: " << files[i].name << " MAGIC: 0x" << std::hex << std::setw(8) << files[i].magic << std::endl;
 
 
 				ifs.seekg(tempPos, std::ios::beg);
@@ -452,6 +480,7 @@ bool ALAR_repack(fs::path dirIn, fs::path fileOut, bool packFilesWithin) {
 		std::string tmp;
 		std::vector<std::string> fileNameVector;
 		std::vector<uint32_t> fileTypeVector;
+		std::vector<uint32_t> fileMagicVector;
 		ifpack >> tmp;
 		uint32_t packageID = 0;
 		uint32_t packageIDend = 0;
@@ -467,13 +496,17 @@ bool ALAR_repack(fs::path dirIn, fs::path fileOut, bool packFilesWithin) {
 
 			std::string tmpVal;
 			std::string tmpName;
-			while ((ifpack >> tmp) && (ifpack >> tmpVal) && (ifpack >> tmp) && (ifpack >> tmpName)) {
+			std::string tmpMagic;
+			while ((ifpack >> tmp) && (ifpack >> tmpVal) && (ifpack >> tmp) && (ifpack >> tmpName) && (ifpack >> tmp) && (ifpack >> tmpMagic)) {
 				
 				uint32_t packageType;
+				uint32_t packageMagic;
 				sscanf(tmpVal.c_str(), "0x%x", &packageType);
-				LOG_EXTRA("packageType: 0x" << std::hex << packageType << "  name: " << tmpName);
+				sscanf(tmpMagic.c_str(), "0x%x", &packageMagic);
+				LOG_EXTRA("packageType: 0x" << std::hex << packageType << "  name: " << tmpName << "  magic: " << packageMagic);
 				fileNameVector.push_back(tmpName);
 				fileTypeVector.push_back(packageType);
+				fileMagicVector.push_back(packageMagic);
 				//packageIDend = packageType;
 			}
 		}
@@ -527,15 +560,17 @@ bool ALAR_repack(fs::path dirIn, fs::path fileOut, bool packFilesWithin) {
 						LOG_EXTRA("fileOffset: " << fileOffset);
 						ofs.write(reinterpret_cast<char*>(&fileOffset), 4);
 						ofs.write(reinterpret_cast<char*>(&fileSize), 4);
-						ofs.write("loli", 4); //a constant of which I have no clue what it does
+						//ofs.write("loli", 4); //a constant of which I have no clue what it does
+						ofs.write(reinterpret_cast<char*>(&fileMagicVector.front()), 4);
 						ofs.seekp(tmpLoc, ofs.beg);
 					}
 				}
 				
 
 				//ofs << "FILE HERE";
-
+				pop_front(fileTypeVector);
 				pop_front(fileNameVector);
+				pop_front(fileMagicVector);
 			}
 
 		}
@@ -697,19 +732,19 @@ int main(int argc, char* argv[]) {
 	to_linklink_pam /= "temp/LINK_LINK_FEVER_01.pam";
 
 	fs::path to_atx = unpackedDir;
-	to_atx /= "Avatar.aar/AvatarTexture.atx";
+	to_atx /= "NavigatorTexture.aar/";
 	fs::path to_pam = unpackedDir;
-	to_pam /= "temp/AvatarTexture.pam";
+	to_pam /= "NavigatorTexture/NavigatorTexture.pam";
 	//ALTX_unpack(to_atx, to_pam);
 
 
-	//ALTX_unpack_dir(to_atx_);
-	//unpackGameData();
+	//ALTX_unpack_dir(to_atx);
+	unpackGameData();
 	fs::path inAlar = unpackedDir;
 	inAlar /= "Stage00951.aar";
 	fs::path outAlar = unpackedDir;
 	outAlar /= "out.aar";
-	ALAR_repack(inAlar, outAlar, false);
+	//ALAR_repack(inAlar, outAlar, false);
 	//main_LZSS((char*)"D:\\games\\Groove Coaster for Steam\\Data\\NavigatorTexture.aar", (char*)"D:\\games\\groove_coaster_unpacked\\NavigatorTexture.aar\\NavigatorTexture.aar");
 	//repackGameData();
 	fs::path tttt = unpackedDir;
@@ -718,5 +753,24 @@ int main(int argc, char* argv[]) {
 	ttttt /= "NavigatorTexture.aar/out_NavigatorTexture.atx";
 	//ALTX_unpack(ttttt, tttt);
 
+	fs::path tutaar = gameDir;
+	tutaar /= "Data";
+	tutaar /= "Stage00382.aar";
+	fs::path tutunp = "D:\\games\\tmp";
+	fs::path tutrep = "D:\\games\\Stage00382.aar";
+
+	fs::path artaar = gameDir;
+	artaar /= "Data";
+	artaar /= "StageTextureJp.aar";
+	fs::path artunp = "D:\\games\\tmp3";
+
+	//ALAR_unpack(tutaar, tutunp);
+	//ALAR_unpack(artaar, artunp);
+	//ALTX_unpack("D:\\games\\out_Shiva_01.raw", "D:\\games\\out_Shiva_human.pam");
+	//ALAR_repack(artunp, artaar, false);
+	//ALAR_repack(tutunp, tutrep, false);
+
 	return 0;
 }
+
+#endif

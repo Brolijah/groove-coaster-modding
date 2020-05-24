@@ -13,12 +13,27 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\pack&amp;unpack">
+      <UniqueIdentifier>{8108202f-1a55-41f1-89aa-d4af5b9a1b5f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\pack&amp;unpack">
+      <UniqueIdentifier>{16673a09-0060-4d8f-b99b-30934cec1493}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="aqualead_LZSS\aqualead_LZSS.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="aqualead_LZSS\aqualead_LZSS.c">
+    <ClCompile Include="main_old.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="CLI.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="pack_unpack\ALAR.cpp">
+      <Filter>Source Files\pack&amp;unpack</Filter>
+    </ClCompile>
+    <ClCompile Include="common.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -30,6 +45,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="aqualead_LZSS\aqualead_LZSS.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pack_unpack\ALAR.h">
+      <Filter>Header Files\pack&amp;unpack</Filter>
+    </ClInclude>
+    <ClInclude Include="common.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
