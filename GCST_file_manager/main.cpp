@@ -129,6 +129,13 @@ bool updateGamePath(std::string gamePath) {
 	return false;
 }
 
+template<typename T>
+void pop_front(std::vector<T>& v)
+{
+	if (v.size() > 0) {
+		v.erase(v.begin());
+	}
+}
 
 bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 	std::ifstream ifs(fileIn, std::ios::binary);
@@ -163,10 +170,11 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 			struct RGBA* palette = (struct RGBA*)malloc(1024);
 			if ((std::string)magic2 == "RGBA") {
 				for (int i = 0; i < 256; i++) {
-					ifs.read(&palette[i].R, 1);
-					ifs.read(&palette[i].G, 1);
-					ifs.read(&palette[i].B, 1);
-					ifs.read(&palette[i].A, 1);
+					ifs.read(&palette[i].R, 4); //should do the same as the following four lines, but faster
+					//ifs.read(&palette[i].R, 1);
+					//ifs.read(&palette[i].G, 1);
+					//ifs.read(&palette[i].B, 1);
+					//ifs.read(&palette[i].A, 1);
 				}
 			}
 			else {
@@ -186,10 +194,11 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 		}
 		else if ((std::string)magic == "RGBA") {
 			for (unsigned int i = 0; i < (width * height); i++) {
-				ifs.read(&image[i].R, 1);
-				ifs.read(&image[i].G, 1);
-				ifs.read(&image[i].B, 1);
-				ifs.read(&image[i].A, 1);
+				ifs.read(&image[i].R, 4); //should do the same as the following four lines, but faster
+				//ifs.read(&image[i].R, 1);
+				//ifs.read(&image[i].G, 1);
+				//ifs.read(&image[i].B, 1);
+				//ifs.read(&image[i].A, 1);
 			}
 		}
 		else if ((std::string)magic == "BGRA") {
@@ -225,10 +234,11 @@ bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
 		ofs << "ENDHDR\n";
 
 		for (unsigned int i = 0; i < (width * height); i++) {
-			ofs.write(&image[i].R, 1);
-			ofs.write(&image[i].G, 1);
-			ofs.write(&image[i].B, 1);
-			ofs.write(&image[i].A, 1);
+			ofs.write(&image[i].R, 4); //should do the same as the following four lines, but faster
+			//ofs.write(&image[i].R, 1);
+			//ofs.write(&image[i].G, 1);
+			//ofs.write(&image[i].B, 1);
+			//ofs.write(&image[i].A, 1);
 		}
 		ofs.close();
 		free(image);
@@ -302,11 +312,18 @@ bool ALTX_repack_pam(fs::path fileIn, fs::path fileOut) {
 		}
 		LOG_INFO("repacking file " << fileIn.filename() << ", width=" << width << " height=" << height << " depth=" << depth << " type=" << sType << " maxval=" << maxval);
 
+		if (fs::is_regular_file(fileOut)) {
+			fs::remove(fileOut);
+		}
+		std::ofstream ofs(fileOut, std::ios::binary);
+		ofs << "ALTX";
 
+		ofs.close();
 	}
 	else {
 		LOG_ERROR("input file is not a pam file!")
 	}
+	ifs.close();
 	return true;
 }
 bool ALTX_repack_tga(fs::path fileIn, fs::path fileOut) {
@@ -385,7 +402,7 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 				fOut.close();
 
 				//adding metadata to PACKAGE_INFO.txt
-				ofs << "TYPE: 0x" << std::setw(8) << std::hex << files[i].type << std::dec << " NAME: " << files[i].name << std::endl;
+				ofs << "TYPE: 0x" << std::setw(8) << std::setfill('0') << std::hex << files[i].type << std::dec << " NAME: " << files[i].name << std::endl;
 
 
 				ifs.seekg(tempPos, std::ios::beg);
@@ -433,13 +450,96 @@ bool ALAR_repack(fs::path dirIn, fs::path fileOut, bool packFilesWithin) {
 
 		std::ifstream ifpack(packageInfo);
 		std::string tmp;
+		std::vector<std::string> fileNameVector;
+		std::vector<uint32_t> fileTypeVector;
 		ifpack >> tmp;
+		uint32_t packageID = 0;
+		uint32_t packageIDend = 0;
 		if (tmp == "PACKAGEID:") {
-			uint32_t packageID;
+			
 			ifpack >> tmp;
-			sscanf(tmp.c_str(), "%x", packageID);
-			LOG_INFO("packageID: " << packageID);
+			sscanf(tmp.c_str(), "0x%x", &packageID);
+			
+			ifpack >> tmp;
+			ifpack >> tmp;
+			sscanf(tmp.c_str(), "0x%x", &packageIDend);
+			LOG_INFO("packageID: 0x" << std::hex << packageID << "  packageIDend: 0x" << packageIDend);
+
+			std::string tmpVal;
+			std::string tmpName;
+			while ((ifpack >> tmp) && (ifpack >> tmpVal) && (ifpack >> tmp) && (ifpack >> tmpName)) {
+				
+				uint32_t packageType;
+				sscanf(tmpVal.c_str(), "0x%x", &packageType);
+				LOG_EXTRA("packageType: 0x" << std::hex << packageType << "  name: " << tmpName);
+				fileNameVector.push_back(tmpName);
+				fileTypeVector.push_back(packageType);
+				//packageIDend = packageType;
+			}
 		}
+		ifpack.close();
+
+		//move on to constructing the new package
+		if (fs::is_regular_file(fileOut)) {
+			fs::remove(fileOut);
+		}
+		std::ofstream ofs(fileOut, std::ios::binary);
+		if (!ofs.bad()) {
+			ofs << "ALAR\x2";
+			ofs << "\x61"; //no clue what this value does, but we'll see
+
+			uint16_t fileCount = fileNameVector.size();
+			LOG_EXTRA("filecount: " << fileCount);
+			ofs.write(reinterpret_cast<char*>(&fileCount), 2);
+			ofs.write(reinterpret_cast<char*>(&packageID), 4);
+			ofs.write(reinterpret_cast<char*>(&packageIDend), 4);
+			for (int i = 0; i < fileCount; i++) {
+				ofs << "emptyindexentry!";
+			}
+			ofs.write("\x1\x1", 2); //OG file also has this, dunno why
+			for (int i = 0; i < fileCount; i++) {
+				if (fileNameVector.front().size() > 0x22) {
+					LOG_ERROR("filename " << fileNameVector.front() << " is longer than what .aar packages can handle (max 34 characters)");
+					return false;
+				}
+				ofs << fileNameVector.front();
+				ofs.seekp((0x22 - fileNameVector.front().size()), std::ios::cur);
+				std::streamoff fileOffsetLoc = ofs.tellp();
+				fs::path dataFileToPack = dirIn;
+				dataFileToPack /= fileNameVector.front();
+
+				if (fs::is_regular_file(dataFileToPack)) {
+					LOG_EXTRA("file " << dataFileToPack << "exists, and we'll pack it");
+					std::ifstream ifs(dataFileToPack, std::ios::binary | std::ios::ate);
+					if (!ifs.bad()) {
+						uint32_t fileSize = ifs.tellg();
+						ifs.seekg(ifs.beg);
+						std::vector<char> fileBuffer(fileSize);
+						LOG_EXTRA("filesize: " << fileSize);
+						ifs.read(fileBuffer.data(), fileSize);
+						ofs.write(fileBuffer.data(), fileSize);
+
+						//update header
+						std::streamoff tmpLoc = ofs.tellp();
+						ofs.seekp((16 + (i * 16)), ofs.beg);
+						ofs.write(reinterpret_cast<char*>(&fileTypeVector.front()), 4);
+						uint32_t fileOffset = (uint32_t)fileOffsetLoc;
+						LOG_EXTRA("fileOffset: " << fileOffset);
+						ofs.write(reinterpret_cast<char*>(&fileOffset), 4);
+						ofs.write(reinterpret_cast<char*>(&fileSize), 4);
+						ofs.write("loli", 4); //a constant of which I have no clue what it does
+						ofs.seekp(tmpLoc, ofs.beg);
+					}
+				}
+				
+
+				//ofs << "FILE HERE";
+
+				pop_front(fileNameVector);
+			}
+
+		}
+		ofs.close();
 
 	}
 	else {
@@ -602,14 +702,14 @@ int main(int argc, char* argv[]) {
 	to_pam /= "temp/AvatarTexture.pam";
 	//ALTX_unpack(to_atx, to_pam);
 
-	fs::path to_atx_ = unpackedDir;
-	to_atx_ /= "NavigatorTexture.aar";
+
 	//ALTX_unpack_dir(to_atx_);
 	//unpackGameData();
-
+	fs::path inAlar = unpackedDir;
+	inAlar /= "Stage00951.aar";
 	fs::path outAlar = unpackedDir;
 	outAlar /= "out.aar";
-	ALAR_repack(to_atx_, outAlar, false);
+	ALAR_repack(inAlar, outAlar, false);
 	//main_LZSS((char*)"D:\\games\\Groove Coaster for Steam\\Data\\NavigatorTexture.aar", (char*)"D:\\games\\groove_coaster_unpacked\\NavigatorTexture.aar\\NavigatorTexture.aar");
 	//repackGameData();
 	fs::path tttt = unpackedDir;
