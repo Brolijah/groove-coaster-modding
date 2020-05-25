@@ -77,9 +77,18 @@ bool unpack_game(fs::path gameDir, fs::path unpackedDir) {
 		for (auto& p : fs::directory_iterator(gameDir)) {
 			fs::path newDir = unpackedDir;
 			newDir /= p.path().filename();
+			if (fs::is_directory(newDir)) {
+				try {
+					fs::remove_all(newDir);
+				}
+				catch (fs::filesystem_error& e) {
+					LOG_ERROR("in unpack_game: " << e.what());
+				}
+				
+			}
 			fs::create_directory(newDir);
+			LOG_MANDATORY("unpacking: " << newDir);
 			unpack(p.path(), newDir);
-			LOG_EXTRA("unpacking: " << newDir);
 		}
 	}
 	else {

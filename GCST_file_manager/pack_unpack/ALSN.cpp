@@ -31,7 +31,7 @@ bool ALSN_unpack(std::filesystem::path fileIn, std::filesystem::path fileOut) {
 			if (!ofsData.bad() && !ofsHeader.bad()) {
 				ofsHeader.write(reinterpret_cast<char*>(headerBuffer.data()), 32);
 				ofsData.write(reinterpret_cast<char*>(soundBuffer.data()), fileSize - 32);
-				LOG_ERROR("the ALSN file has been split");
+				LOG_EXTRA("the ALSN file has been split");
 			}
 			ofsData.close();
 			ofsHeader.close();
