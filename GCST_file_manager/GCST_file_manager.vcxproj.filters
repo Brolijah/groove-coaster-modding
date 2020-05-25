@@ -21,9 +21,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="aqualead_LZSS\aqualead_LZSS.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="main_old.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -37,6 +34,15 @@
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="pack_unpack\ALTX.cpp">
+      <Filter>Source Files\pack&amp;unpack</Filter>
+    </ClCompile>
+    <ClCompile Include="pack_unpack\general.cpp">
+      <Filter>Source Files\pack&amp;unpack</Filter>
+    </ClCompile>
+    <ClCompile Include="pack_unpack\ALLZ.c">
+      <Filter>Source Files\pack&amp;unpack</Filter>
+    </ClCompile>
+    <ClCompile Include="pack_unpack\ALSN.cpp">
       <Filter>Source Files\pack&amp;unpack</Filter>
     </ClCompile>
   </ItemGroup>
@@ -57,6 +63,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="pack_unpack\ALTX.h">
+      <Filter>Header Files\pack&amp;unpack</Filter>
+    </ClInclude>
+    <ClInclude Include="pack_unpack\general.h">
+      <Filter>Header Files\pack&amp;unpack</Filter>
+    </ClInclude>
+    <ClInclude Include="pack_unpack\ALLZ.h">
+      <Filter>Header Files\pack&amp;unpack</Filter>
+    </ClInclude>
+    <ClInclude Include="pack_unpack\ALSN.h">
       <Filter>Header Files\pack&amp;unpack</Filter>
     </ClInclude>
   </ItemGroup>

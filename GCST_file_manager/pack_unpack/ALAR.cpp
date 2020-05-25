@@ -98,7 +98,7 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 }
 
 //clean up this code!
-bool ALAR_repack(fs::path dirIn, fs::path fileOut, bool packFilesWithin) {
+bool ALAR_pack(fs::path dirIn, fs::path fileOut) {
 
 	std::vector<std::string> filesToBeYeeted;
 
@@ -106,7 +106,7 @@ bool ALAR_repack(fs::path dirIn, fs::path fileOut, bool packFilesWithin) {
 	packageInfo /= "PACKAGE_INFO.txt";
 	if (fs::is_regular_file(packageInfo)) {
 		LOG_EXTRA("the package info exists for directory " << dirIn);
-		if (packFilesWithin) {
+		/*if (packFilesWithin) {
 			for (auto& p : fs::directory_iterator(dirIn)) {
 				LOG_EXTRA("   " << p.path());
 				//LOG_EXTRA("packed file name: " << packedFile);
@@ -123,7 +123,7 @@ bool ALAR_repack(fs::path dirIn, fs::path fileOut, bool packFilesWithin) {
 					//add more when more filetypes are reverse-engineered
 				}
 			}
-		}
+		}*/
 
 		std::ifstream ifpack(packageInfo);
 		std::string tmp;

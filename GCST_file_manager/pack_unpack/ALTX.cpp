@@ -13,7 +13,7 @@ struct RGBA {
 	char A;
 };
 
-bool ALTX_unpack(fs::path fileIn, fs::path fileOut) {
+bool ALTX_unpack_pam(fs::path fileIn, fs::path fileOut) {
 	std::ifstream ifs(fileIn, std::ios::binary);
 	ifs.seekg(0, std::ios::end);
 	std::streamoff fileSize = ifs.tellg();
@@ -169,7 +169,7 @@ bool ALTX_unpack_dir(fs::path directory) {
 				tmpstr += ".pam";
 				out /= tmpstr;
 				try {
-					ALTX_unpack(p.path(), out);
+					ALTX_unpack_pam(p.path(), out);
 				}
 				catch (fs::filesystem_error& e) {
 					LOG_ERROR("(in ALTX_unpack_dir) " << e.what());
