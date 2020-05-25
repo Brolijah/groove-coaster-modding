@@ -1,3 +1,4 @@
+//#define NOPE
 #ifdef NOPE
 
 #include <iostream>

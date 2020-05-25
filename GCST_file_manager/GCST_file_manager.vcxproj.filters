@@ -36,6 +36,9 @@
     <ClCompile Include="common.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="pack_unpack\ALTX.cpp">
+      <Filter>Source Files\pack&amp;unpack</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="aqualead_LZSS\aqualead_types.h">
@@ -52,6 +55,9 @@
     </ClInclude>
     <ClInclude Include="common.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="pack_unpack\ALTX.h">
+      <Filter>Header Files\pack&amp;unpack</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
