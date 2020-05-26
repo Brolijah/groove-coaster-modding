@@ -151,6 +151,7 @@
     <ClCompile Include="pack_unpack\ALAR.cpp" />
     <ClCompile Include="pack_unpack\ALLZ.c" />
     <ClCompile Include="pack_unpack\ALSN.cpp" />
+    <ClCompile Include="pack_unpack\ALTB.cpp" />
     <ClCompile Include="pack_unpack\ALTX.cpp" />
     <ClCompile Include="pack_unpack\general.cpp" />
   </ItemGroup>
@@ -162,6 +163,7 @@
     <ClInclude Include="pack_unpack\ALAR.h" />
     <ClInclude Include="pack_unpack\ALLZ.h" />
     <ClInclude Include="pack_unpack\ALSN.h" />
+    <ClInclude Include="pack_unpack\ALTB.h" />
     <ClInclude Include="pack_unpack\ALTX.h" />
     <ClInclude Include="pack_unpack\general.h" />
   </ItemGroup>

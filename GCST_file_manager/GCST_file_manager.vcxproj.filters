@@ -45,6 +45,9 @@
     <ClCompile Include="pack_unpack\ALSN.cpp">
       <Filter>Source Files\pack&amp;unpack</Filter>
     </ClCompile>
+    <ClCompile Include="pack_unpack\ALTB.cpp">
+      <Filter>Source Files\pack&amp;unpack</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="aqualead_LZSS\aqualead_types.h">
@@ -72,6 +75,9 @@
       <Filter>Header Files\pack&amp;unpack</Filter>
     </ClInclude>
     <ClInclude Include="pack_unpack\ALSN.h">
+      <Filter>Header Files\pack&amp;unpack</Filter>
+    </ClInclude>
+    <ClInclude Include="pack_unpack\ALTB.h">
       <Filter>Header Files\pack&amp;unpack</Filter>
     </ClInclude>
   </ItemGroup>

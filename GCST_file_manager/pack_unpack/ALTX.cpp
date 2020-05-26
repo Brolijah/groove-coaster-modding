@@ -106,7 +106,7 @@ bool ALTX_unpack_pam(fs::path fileIn, fs::path fileOut) {
 			}
 		}
 		else {
-			LOG_ERROR("unknown pallette format");
+			LOG_ERROR("unknown palette format (" << (std::string)magic << ") in file " << fileIn );
 		}
 
 

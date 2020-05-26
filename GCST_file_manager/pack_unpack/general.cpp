@@ -8,6 +8,7 @@
 #include "ALLZ.h"
 #include "ALAR.h"
 #include "ALSN.h"
+#include "ALTB.h"
 
 namespace fs = std::filesystem;
 
@@ -29,6 +30,11 @@ bool unpack(fs::path fileIn, fs::path directoryOut) {
 bool to_game_files(fs::path directoryIn) {
 	for (auto& p : fs::directory_iterator(directoryIn)) {
 		LOG_EXTRA("current file: " << p.path().filename());
+		if (p.path().extension() == ".ogg") {
+			fs::path outFile = p.path().parent_path();
+			outFile /= (p.path().stem() += ".asn");
+			ALSN_pack(p.path(), outFile);
+		}
 	}
 
 	return true;
@@ -60,6 +66,13 @@ bool to_human_files(fs::path directoryIn) {
 				ALSN_unpack(p.path(), fOut);
 				break;
 			};
+			/*case AL_TYPE_ALTB: {
+				LOG_EXTRA("  ALTB file");
+				fs::path fOut = p.path().parent_path();
+				fOut /= (p.path().stem() += ".txt");
+				ALTB_unpack(p.path(), fOut);
+				break;
+			}*/
 			default:
 				LOG_INFO("file " << p.path().filename() << "is not a file that can be humanized (yet?)");
 				break;

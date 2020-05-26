@@ -40,7 +40,35 @@ bool ALSN_unpack(std::filesystem::path fileIn, std::filesystem::path fileOut) {
 	}
 	return true;
 }
+
 bool ALSN_pack(std::filesystem::path fileIn, std::filesystem::path fileOut) {
 	LOG_ERROR("NOT IMPLEMENTED");
+	fs::path headerPath = fileIn.parent_path();
+	headerPath /= (fileIn.stem() += ".HEADER");
+
+	std::ifstream ifsSound(fileIn, std::ios::binary);
+	std::ifstream ifsHeader(headerPath, std::ios::binary);
+	if (!ifsSound.bad() && !ifsHeader.bad()) {
+		ifsSound.seekg(0, std::ios::end);
+		LOG_EXTRA("size of datafile: " << ifsSound.tellg());
+		std::streamoff fileSize = ifsSound.tellg();
+		std::vector<char> headerBuffer(32);
+		std::vector<char> soundBuffer(fileSize - 32);
+		ifsSound.seekg(0, std::ios::beg);
+		ifsHeader.read(reinterpret_cast<char*>(headerBuffer.data()), 32);
+		ifsSound.read(reinterpret_cast<char*>(soundBuffer.data()), fileSize - 32);
+		ifsSound.close();
+		ifsHeader.close();
+		//fs::remove(fileIn);
+
+		std::ofstream ofs(fileOut, std::ios::binary);
+		if (!ofs.bad()) {
+			ofs.write(reinterpret_cast<char*>(headerBuffer.data()), 32);
+			ofs.write(reinterpret_cast<char*>(soundBuffer.data()), fileSize);
+			
+			LOG_EXTRA("the ALSN file has been merged");
+		}
+		ofs.close();
+	}
 	return true;
 }
