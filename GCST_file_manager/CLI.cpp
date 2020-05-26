@@ -2,6 +2,7 @@
 #include "pack_unpack/ALAR.h"
 #include "pack_unpack/ALTX.h"
 #include "pack_unpack/general.h"
+#include "pack_unpack/ALLZ.h"
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -14,6 +15,7 @@ int main(int argc, char* argv[]) {
 	std::string gameDir = "tmp";
 	std::string unpackDir = "tmp";
 	LOG_MANDATORY("GCST file packer & unpacker");
+	LOG_MANDATORY("program by Frain_Breeze, ALLZ decoder by Brolijah");
 	//reading game & unpack dir from settings file
 	if (fs::is_regular_file("settings.ini")) {
 		std::ifstream settingsFile("settings.ini");
@@ -47,15 +49,15 @@ int main(int argc, char* argv[]) {
 	
 	//actually processing commandline args
 	if (argc == 1) { //no parameters given
-		LOG_MANDATORY("No parameters were given, so here's the list of commands: (x) means x is optional. you can use gameDir and unpackDir instead of full directorynames.");
+		LOG_MANDATORY("No parameters were given, so here's the list of commands: (x) means x is optional." /*you can use gameDir and unpackDir instead of full directorynames."*/);
 		LOG_MANDATORY("  unpack fileIn directoryOut");
 		LOG_MANDATORY("  pack directoryIn fileOut");
 		LOG_MANDATORY("  unpack_game  // unpacks gameDir to unpackDir");
-		LOG_MANDATORY("  pack_game // packs unpackDir to gameDir");
+		//LOG_MANDATORY("  pack_game // packs unpackDir to gameDir");
 		LOG_MANDATORY("  ALAR_unpack fileIn directoryOut  // doesn't convert files within directory");
 		LOG_MANDATORY("  ALAR_pack directoryIn fileOut (noConvert)  // by passing no-convert, it will skip files that aren't available in the format specified in PACKAGE_INFO.txt. be careful with this");
-		LOG_MANDATORY("  ALTX_unpack fileIn fileOut format // format can be PAM or TGA");
-		LOG_MANDATORY("  ALTX_pack fileIn fileOut  // input file can be PAM or TGA");
+		LOG_MANDATORY("  ALTX_unpack fileIn fileOut format // output format is currently PAM, will change to TGA soon");
+		//LOG_MANDATORY("  ALTX_pack fileIn fileOut  // input file can be PAM or TGA");
 		LOG_MANDATORY("  ALSN_unpack fileIn fileOut  // saves header in filename.HEADER, for repacking later on");
 		LOG_MANDATORY("  ALSN_pack fileIn fileOut  // shoves in anything you want, but just use .ogg (since that's what the game uses)");
 		LOG_MANDATORY("  ALLZ_unpack fileIn (fileOut)  // if fileOut is not specified, it will overwrite the original file");
@@ -104,7 +106,7 @@ int main(int argc, char* argv[]) {
 
 		if (argComm == "pack") {
 			if (argc == 4) {
-				if (fs::is_directory(arg1)) {
+				if (fs::is_directory(arg1) && fs::is_regular_file(arg2)) {
 					pack(arg1, arg2);
 				}
 				else {
@@ -117,12 +119,36 @@ int main(int argc, char* argv[]) {
 		if (argComm == "ALLZ_unpack") {
 			if (argc == 3) { //no fileOut, just overwrite the OG file
 				if (fs::is_regular_file(arg1)) {
-					//ALLZ_unpack()
+					ALLZ_decompress(arg1.c_str(), arg1.c_str());
 				}
 			}
 			else if(argc == 4){ //fileOut has been supplied too
 				if (fs::is_regular_file(arg1) && fs::is_regular_file(arg2)) {
-					//ALLZ_unpack()
+					ALLZ_decompress(arg1.c_str(), arg2.c_str());
+				}
+			}
+		}
+
+		if (argComm == "ALSN_unpack") {
+			LOG_EXTRA("command: ALSN unpack");
+			if (argc == 4) {
+				if (fs::is_regular_file(arg1) && fs::is_directory(arg2)) {
+					unpack(arg1, arg2);
+				}
+				else {
+					LOG_WARN("one of the args is incorrect, command \"unpack\" skipped");
+				}
+			}
+		}
+
+		if (argComm == "ALSN_pack") {
+			LOG_EXTRA("command: ALSN pack");
+			if (argc == 4) {
+				if (fs::is_regular_file(arg1) && fs::is_directory(arg2)) {
+					unpack(arg1, arg2);
+				}
+				else {
+					LOG_WARN("one of the args is incorrect, command \"unpack\" skipped");
 				}
 			}
 		}
