@@ -8,6 +8,19 @@
 #include <iostream>
 #include <filesystem>
 
+/*
+a wise man once said:
+
+I find it weird you pass fs:path's everywhere. Ideally, the functions should be self-contained to only do what they are described to do.
+So a decode or unpack function should probably just take a pointer to a file stream/buffer and export it to a dst or return that dst.
+It doesn't make sense for the duty of a decode function to also read a file and export a file.
+That should be the job of whatever called the decode or unpack function.
+If you do insist on passing around fs::path objects everywhere, maybe instead do so by reference instead of copying them everywhere.
+
+so fix that. some day.
+*/
+
+
 namespace fs = std::filesystem;
 
 int main(int argc, char* argv[]) {
@@ -44,7 +57,7 @@ int main(int argc, char* argv[]) {
 			settingsFile << "UNPACKDIR: none\n";
 		}
 		settingsFile.close();
-		return EXIT_FAILURE;
+		//return EXIT_FAILURE;
 	}
 	
 	//actually processing commandline args
@@ -52,7 +65,8 @@ int main(int argc, char* argv[]) {
 		LOG_MANDATORY("No parameters were given, so here's the list of commands: (x) means x is optional." /*you can use gameDir and unpackDir instead of full directorynames."*/);
 		LOG_MANDATORY("  unpack fileIn directoryOut");
 		LOG_MANDATORY("  pack directoryIn fileOut");
-		LOG_MANDATORY("  unpack_game  // unpacks gameDir to unpackDir");
+		LOG_MANDATORY("  unpack_game  // unpacks gameDir to unpackDir (but filenames with spaces don't work, great");
+		LOG_MANDATORY("     -unpack dirIn dirOut  // for if you want to not care about spaces")
 		//LOG_MANDATORY("  pack_game // packs unpackDir to gameDir");
 		LOG_MANDATORY("  ALAR_unpack fileIn directoryOut  // doesn't convert files within directory");
 		LOG_MANDATORY("  ALAR_pack directoryIn fileOut (noConvert)  // by passing no-convert, it will skip files that aren't available in the format specified in PACKAGE_INFO.txt. be careful with this");
@@ -91,7 +105,19 @@ int main(int argc, char* argv[]) {
 		if (argc == 5)
 			arg3 = (std::string)argv[4];
 		LOG_EXTRA("argComm: " << argComm);
-		LOG_EXTRA("poyo");
+
+		if (argComm == "unpack_game") {
+			LOG_EXTRA("command: unpack_game");
+			if (argc == 4) {
+				if (fs::is_directory(arg1) && fs::is_directory(arg2)) {
+					unpack_game(arg1, arg2);
+				}
+				else {
+					LOG_WARN("one of the args is incorrect, command \"unpack_game\" skipped");
+				}
+			}
+		}
+
 		if (argComm == "unpack") {
 			LOG_EXTRA("command: unpack");
 			if (argc == 4) {
@@ -156,5 +182,6 @@ int main(int argc, char* argv[]) {
 		//and more
 	}
 
+	LOG_MANDATORY("done. successfully? who knows.");
 	return EXIT_SUCCESS;
 }
