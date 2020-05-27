@@ -86,8 +86,11 @@ bool to_human_files(fs::path directoryIn) {
 }
 
 bool unpack_game(fs::path gameDir, fs::path unpackedDir) {
-	if (fs::is_directory(gameDir) && fs::is_directory(unpackedDir)) {
-		for (auto& p : fs::directory_iterator(gameDir)) {
+	fs::path dataDir = gameDir;
+	dataDir /= "Data";
+	LOG_EXTRA("datadir: " << dataDir);
+	if (fs::is_directory(dataDir) && fs::is_directory(unpackedDir)) {
+		for (auto& p : fs::directory_iterator(dataDir)) {
 			fs::path newDir = unpackedDir;
 			newDir /= p.path().filename();
 			if (fs::is_directory(newDir)) {
@@ -101,7 +104,12 @@ bool unpack_game(fs::path gameDir, fs::path unpackedDir) {
 			}
 			fs::create_directory(newDir);
 			LOG_MANDATORY("unpacking: " << newDir);
-			unpack(p.path(), newDir);
+			try {
+				unpack(p.path(), newDir);
+			}
+			catch (fs::filesystem_error& e) {
+				LOG_ERROR("in unpack_game " << e.what());
+			}
 		}
 	}
 	else {

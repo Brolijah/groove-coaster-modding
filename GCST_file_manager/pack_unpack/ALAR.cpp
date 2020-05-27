@@ -10,6 +10,7 @@ struct HEADERFILEENTRY {
 	uint32_t offset;
 	uint32_t size;
 	uint32_t magic;
+	uint16_t thing;
 	uint8_t name[0x21]; //add a last byte to act as terminator
 };
 
@@ -59,7 +60,8 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 				files[i].name[sizeof(files[i].name)] = '\x0';
 				ifs.seekg(files[i].offset - 0x22, std::ios::beg);
 				ifs.read(reinterpret_cast<char*>(files[i].name), sizeof(files[i].name) - 1);
-				LOG_EXTRA("current file: " << files[i].name << "  header offset: " << std::hex << ifs.tellg() << std::dec << "  file: " << i << "  type: " << std::hex << files[i].type << "  offset: " << files[i].offset << "  size: " << files[i].size);
+				ifs.read(reinterpret_cast<char*>(&files[i].thing), 2);
+				LOG_EXTRA("current file: " << files[i].name << "  header offset: " << std::hex << ifs.tellg() << std::dec << "  file: " << i << "  type: " << std::hex << files[i].type << "  offset: " << files[i].offset << "  size: " << files[i].size << "  thing: " << files[i].thing);
 
 				//dumping file
 				ifs.seekg(files[i].offset, std::ios::beg);
@@ -77,7 +79,7 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 				fOut.close();
 
 				//adding metadata to PACKAGE_INFO.txt
-				ofs << "TYPE: 0x" << std::setw(8) << std::setfill('0') << std::hex << files[i].type << std::dec << " NAME: " << files[i].name << " MAGIC: 0x" << std::hex << std::setw(8) << files[i].magic << std::endl;
+				ofs << "TYPE: 0x" << std::setw(8) << std::setfill('0') << std::hex << files[i].type << std::dec << " NAME: " << files[i].name << " MAGIC: 0x" << std::hex << std::setw(8) << files[i].magic << " THING: 0x" << std::setw(4) << files[i].thing << std::endl;
 
 
 				ifs.seekg(tempPos, std::ios::beg);
@@ -130,7 +132,7 @@ bool ALAR_pack(fs::path dirIn, fs::path fileOut) {
 		std::vector<std::string> fileNameVector;
 		std::vector<uint32_t> fileTypeVector;
 		std::vector<uint32_t> fileMagicVector;
-		std::vector<uint16_t> fileIdThing;
+		std::vector<uint16_t> fileThingVector;
 		ifpack >> tmp;
 		uint32_t packageID = 0;
 		uint32_t packageIDend = 0;
@@ -148,16 +150,21 @@ bool ALAR_pack(fs::path dirIn, fs::path fileOut) {
 			std::string tmpName;
 			std::string tmpMagic;
 			std::string tmpThing;
-			while ((ifpack >> tmp) && (ifpack >> tmpVal) && (ifpack >> tmp) && (ifpack >> tmpName) && (ifpack >> tmp) && (ifpack >> tmpMagic) && (ifpack)) {
+			while ((ifpack >> tmp) && (ifpack >> tmpVal) && (ifpack >> tmp) && (ifpack >> tmpName) && (ifpack >> tmp) && (ifpack >> tmpMagic) && (ifpack >> tmp) && (ifpack >> tmpThing)) {
 
 				uint32_t packageType;
 				uint32_t packageMagic;
+				uint32_t packageThing; //stack corruption when setting it to 16-bit for... reasons?
 				sscanf(tmpVal.c_str(), "0x%x", &packageType);
 				sscanf(tmpMagic.c_str(), "0x%x", &packageMagic);
-				LOG_EXTRA("packageType: 0x" << std::hex << packageType << "  name: " << tmpName << "  magic: " << packageMagic);
+				packageThing = 0;
+				sscanf(tmpThing.c_str(), "0x%x", &packageThing);
+				
+				LOG_EXTRA("packageType: 0x" << std::hex << packageType << "  name: " << tmpName << "  magic: " << packageMagic << "  thing: " << packageThing);
 				fileNameVector.push_back(tmpName);
 				fileTypeVector.push_back(packageType);
 				fileMagicVector.push_back(packageMagic);
+				fileThingVector.push_back(packageThing);
 				//packageIDend = packageType;
 			}
 		}
@@ -197,6 +204,8 @@ bool ALAR_pack(fs::path dirIn, fs::path fileOut) {
 					std::ifstream ifs(dataFileToPack, std::ios::binary | std::ios::ate);
 					if (!ifs.bad()) {
 						
+						
+
 						uint32_t fileSize = ifs.tellg();
 						ifs.seekg(ifs.beg);
 						std::vector<char> fileBuffer(fileSize);
@@ -206,7 +215,7 @@ bool ALAR_pack(fs::path dirIn, fs::path fileOut) {
 
 						//update header
 						std::streamoff tmpLoc = ofs.tellp();
-						ofs.seekp((16 + (i * 16)), ofs.beg);
+						ofs.seekp((16 + ((uint64_t)i * 16)), ofs.beg);
 						ofs.write(reinterpret_cast<char*>(&fileTypeVector.front()), 4);
 						uint32_t fileOffset = (uint32_t)fileOffsetLoc;
 						LOG_EXTRA("fileOffset: " << fileOffset);
@@ -222,6 +231,7 @@ bool ALAR_pack(fs::path dirIn, fs::path fileOut) {
 				pop_front(fileTypeVector);
 				pop_front(fileNameVector);
 				pop_front(fileMagicVector);
+				pop_front(fileThingVector);
 			}
 
 		}
