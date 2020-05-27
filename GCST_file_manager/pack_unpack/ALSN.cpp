@@ -42,7 +42,6 @@ bool ALSN_unpack(std::filesystem::path fileIn, std::filesystem::path fileOut) {
 }
 
 bool ALSN_pack(std::filesystem::path fileIn, std::filesystem::path fileOut) {
-	LOG_ERROR("NOT IMPLEMENTED");
 	fs::path headerPath = fileIn.parent_path();
 	headerPath /= (fileIn.stem() += ".HEADER");
 
@@ -63,10 +62,14 @@ bool ALSN_pack(std::filesystem::path fileIn, std::filesystem::path fileOut) {
 
 		std::ofstream ofs(fileOut, std::ios::binary);
 		if (!ofs.bad()) {
+			LOG_EXTRA("opened output file");
 			ofs.write(reinterpret_cast<char*>(headerBuffer.data()), 32);
 			ofs.write(reinterpret_cast<char*>(soundBuffer.data()), fileSize);
 			
 			LOG_EXTRA("the ALSN file has been merged");
+		}
+		else {
+			LOG_WARN("cannot open output file!");
 		}
 		ofs.close();
 	}

@@ -130,6 +130,7 @@ bool ALAR_pack(fs::path dirIn, fs::path fileOut) {
 		std::vector<std::string> fileNameVector;
 		std::vector<uint32_t> fileTypeVector;
 		std::vector<uint32_t> fileMagicVector;
+		std::vector<uint16_t> fileIdThing;
 		ifpack >> tmp;
 		uint32_t packageID = 0;
 		uint32_t packageIDend = 0;
@@ -146,7 +147,8 @@ bool ALAR_pack(fs::path dirIn, fs::path fileOut) {
 			std::string tmpVal;
 			std::string tmpName;
 			std::string tmpMagic;
-			while ((ifpack >> tmp) && (ifpack >> tmpVal) && (ifpack >> tmp) && (ifpack >> tmpName) && (ifpack >> tmp) && (ifpack >> tmpMagic)) {
+			std::string tmpThing;
+			while ((ifpack >> tmp) && (ifpack >> tmpVal) && (ifpack >> tmp) && (ifpack >> tmpName) && (ifpack >> tmp) && (ifpack >> tmpMagic) && (ifpack)) {
 
 				uint32_t packageType;
 				uint32_t packageMagic;
@@ -194,6 +196,7 @@ bool ALAR_pack(fs::path dirIn, fs::path fileOut) {
 					LOG_EXTRA("file " << dataFileToPack << "exists, and we'll pack it");
 					std::ifstream ifs(dataFileToPack, std::ios::binary | std::ios::ate);
 					if (!ifs.bad()) {
+						
 						uint32_t fileSize = ifs.tellg();
 						ifs.seekg(ifs.beg);
 						std::vector<char> fileBuffer(fileSize);

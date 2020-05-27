@@ -162,7 +162,7 @@ int main(int argc, char* argv[]) {
 					unpack(arg1, arg2);
 				}
 				else {
-					LOG_WARN("one of the args is incorrect, command \"unpack\" skipped");
+					LOG_WARN("one of the args is incorrect, command \"ALSN_unpack\" skipped");
 				}
 			}
 		}
@@ -174,7 +174,31 @@ int main(int argc, char* argv[]) {
 					pack(arg1, arg2);
 				}
 				else {
-					LOG_WARN("one of the args is incorrect, command \"unpack\" skipped");
+					LOG_WARN("one of the args is incorrect, command \"ALSN_pack\" skipped");
+				}
+			}
+		}
+
+		if (argComm == "ALAR_unpack") {
+			LOG_EXTRA("command: ALAR unpack");
+			if (argc == 4) {
+				if (fs::is_regular_file(arg1) && fs::is_directory(arg2)) {
+					ALAR_unpack(arg1, arg2);
+				}
+				else {
+					LOG_WARN("one of the args is incorrect, command \"ALAR_unpack\" skipped");
+				}
+			}
+		}
+
+		if (argComm == "ALAR_pack") {
+			LOG_EXTRA("command: ALSN pack");
+			if (argc == 4) {
+				if (fs::is_directory(arg1) /*&& fs::is_regular_file(arg2)*/) {
+					ALAR_pack(arg1, arg2);
+				}
+				else {
+					LOG_WARN("one of the args is incorrect, command \"ALAR_pack\" skipped");
 				}
 			}
 		}
