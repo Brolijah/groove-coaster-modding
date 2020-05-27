@@ -21,7 +21,7 @@ bool ALTB_unpack(fs::path fileIn, fs::path fileOut) {
 			}
 			LOG_EXTRA("found ALRD at position " << ifs.tellg());
 			ifs.seekg(2, std::ios::cur);
-			uint8_t 
+			//uint8_t 
 		}
 	}
 	else {

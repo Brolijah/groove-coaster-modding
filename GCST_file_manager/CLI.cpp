@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) {
 
 		if (argComm == "pack") {
 			if (argc == 4) {
-				if (fs::is_directory(arg1) && fs::is_regular_file(arg2)) {
+				if (fs::is_directory(arg1)/* && fs::is_regular_file(arg2)*/) {
 					pack(arg1, arg2);
 				}
 				else {
@@ -149,7 +149,7 @@ int main(int argc, char* argv[]) {
 				}
 			}
 			else if(argc == 4){ //fileOut has been supplied too
-				if (fs::is_regular_file(arg1) && fs::is_regular_file(arg2)) {
+				if (fs::is_regular_file(arg1) /*&& fs::is_regular_file(arg2)*/) {
 					ALLZ_decompress(arg1.c_str(), arg2.c_str());
 				}
 			}
@@ -170,8 +170,8 @@ int main(int argc, char* argv[]) {
 		if (argComm == "ALSN_pack") {
 			LOG_EXTRA("command: ALSN pack");
 			if (argc == 4) {
-				if (fs::is_regular_file(arg1) && fs::is_directory(arg2)) {
-					unpack(arg1, arg2);
+				if (fs::is_directory(arg1) /*&& fs::is_regular_file(arg2)*/) {
+					pack(arg1, arg2);
 				}
 				else {
 					LOG_WARN("one of the args is incorrect, command \"unpack\" skipped");

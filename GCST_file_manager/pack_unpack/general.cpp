@@ -66,13 +66,13 @@ bool to_human_files(fs::path directoryIn) {
 				ALSN_unpack(p.path(), fOut);
 				break;
 			};
-			case AL_TYPE_ALTB: {
+			/*case AL_TYPE_ALTB: {
 				LOG_EXTRA("  ALTB file");
 				fs::path fOut = p.path().parent_path();
 				fOut /= (p.path().stem() += ".txt");
 				ALTB_unpack(p.path(), fOut);
 				break;
-			}
+			}*/
 			default:
 				LOG_INFO("file " << p.path().filename() << "is not a file that can be humanized (yet?)");
 				break;

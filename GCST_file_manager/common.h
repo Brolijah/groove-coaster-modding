@@ -13,7 +13,7 @@ void pop_front(std::vector<T>& v)
 
 //define logging type
 #ifdef NDEBUG
-#define RELEASE
+#define DEBUG
 #endif
 #ifdef _DEBUG
 #define VERBOSE
