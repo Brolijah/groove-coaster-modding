@@ -35,6 +35,11 @@ bool to_game_files(fs::path directoryIn) {
 			outFile /= (p.path().stem() += ".asn");
 			ALSN_pack(p.path(), outFile);
 		}
+		if (p.path().extension() == ".csv") {
+			fs::path outFile = p.path().parent_path();
+			outFile /= (p.path().stem() += ".atb");
+			ALTB_pack(p.path(), outFile);
+		}
 	}
 
 	return true;
@@ -43,43 +48,46 @@ bool to_game_files(fs::path directoryIn) {
 bool to_human_files(fs::path directoryIn) {
 	for (auto& p : fs::directory_iterator(directoryIn)) {
 		LOG_EXTRA("current file: " << p.path().filename());
-		ALLZ_decompress(p.path().string().c_str(), p.path().string().c_str());
-		std::ifstream ifs(p.path());
-		if (!ifs.bad()) {
-			uint32_t magic = 0;
-			ifs.read(reinterpret_cast<char*>(&magic), 4);
-			ifs.close();
-			
-			LOG_EXTRA("magic: " << std::hex << magic);
-			switch (magic) {
-			case AL_TYPE_ALTX: {
-				LOG_EXTRA("  ALTX file");
-				fs::path fOut = p.path().parent_path();
-				fOut /= (p.path().stem() += ".pam");
-				ALTX_unpack_pam(p.path(), fOut);
-				break;
-			};
-			case AL_TYPE_ALSN: {
-				LOG_EXTRA("  ALSN file");
-				fs::path fOut = p.path().parent_path();
-				fOut /= (p.path().stem() += ".ogg");
-				ALSN_unpack(p.path(), fOut);
-				break;
-			};
-			case AL_TYPE_ALTB: {
-				LOG_EXTRA("  ALTB file");
-				fs::path fOut = p.path().parent_path();
-				fOut /= (p.path().stem() += ".txt");
-				ALTB_unpack(p.path(), fOut);
-				break;
-			}
-			default:
-				LOG_INFO("file " << p.path().filename() << "is not a file that can be humanized (yet?)");
-				break;
-			};
+		if (p.path().extension() != ".HEADER") {
+			ALLZ_decompress(p.path().string().c_str(), p.path().string().c_str());
+			std::ifstream ifs(p.path());
+			if (!ifs.bad()) {
+				uint32_t magic = 0;
+				ifs.read(reinterpret_cast<char*>(&magic), 4);
+				ifs.close();
 
-				
+				LOG_EXTRA("magic: " << std::hex << magic);
+				switch (magic) {
+				case AL_TYPE_ALTX: {
+					LOG_EXTRA("  ALTX file");
+					fs::path fOut = p.path().parent_path();
+					fOut /= (p.path().stem() += ".pam");
+					ALTX_unpack_pam(p.path(), fOut);
+					break;
+				};
+				case AL_TYPE_ALSN: {
+					LOG_EXTRA("  ALSN file");
+					fs::path fOut = p.path().parent_path();
+					fOut /= (p.path().stem() += ".ogg");
+					ALSN_unpack(p.path(), fOut);
+					break;
+				};
+				case AL_TYPE_ALTB: {
+					LOG_EXTRA("  ALTB file");
+					fs::path fOut = p.path().parent_path();
+					fOut /= (p.path().stem() += ".csv");
+					ALTB_unpack(p.path(), fOut);
+					break;
+				};
+				default:
+					LOG_INFO("file " << p.path().filename() << "is not a file that can be humanized (yet?)");
+					break;
+				};
+
+
+			}
 		}
+		
 	}
 
 	return true;

@@ -3,6 +3,7 @@
 #include "pack_unpack/ALTX.h"
 #include "pack_unpack/general.h"
 #include "pack_unpack/ALLZ.h"
+#include "pack_unpack/ALTB.h"
 #include <string>
 #include <fstream>
 #include <iostream>
@@ -199,6 +200,30 @@ int main(int argc, char* argv[]) {
 				}
 				else {
 					LOG_WARN("one of the args is incorrect, command \"ALAR_pack\" skipped");
+				}
+			}
+		}
+
+		if (argComm == "ALTB_unpack") {
+			LOG_EXTRA("command: ALTB unpack");
+			if (argc == 4) {
+				if (fs::is_regular_file(arg1)) {
+					ALTB_unpack(arg1, arg2);
+				}
+				else {
+					LOG_WARN("one of the args is incorrect, command \"ALTB_unpack\" skipped");
+				}
+			}
+		}
+
+		if (argComm == "ALTB_pack") {
+			LOG_EXTRA("command: ALTB pack");
+			if (argc == 4) {
+				if (fs::is_regular_file(arg1)) {
+					ALTB_pack(arg1, arg2);
+				}
+				else {
+					LOG_WARN("one of the args is incorrect, command \"ALTB_pack\" skipped");
 				}
 			}
 		}

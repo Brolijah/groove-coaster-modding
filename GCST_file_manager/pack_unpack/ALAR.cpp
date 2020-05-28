@@ -11,7 +11,7 @@ struct HEADERFILEENTRY {
 	uint32_t size;
 	uint32_t magic;
 	uint16_t thing;
-	uint8_t name[0x21]; //add a last byte to act as terminator
+	char name[0x21]; //add a last byte to act as terminator
 };
 
 
@@ -57,9 +57,10 @@ bool ALAR_unpack(fs::path fileIn, fs::path dirOut) {
 				//getting the file name
 				//char fileName[] = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"; //the last char is 0x00 this way
 				std::streamoff tempPos = ifs.tellg();
-				files[i].name[sizeof(files[i].name)] = '\x0';
+				files[i].name[0x21] = '\x0';
+				//files[i].name = "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 				ifs.seekg(files[i].offset - 0x22, std::ios::beg);
-				ifs.read(reinterpret_cast<char*>(files[i].name), sizeof(files[i].name) - 1);
+				ifs.read(reinterpret_cast<char*>(files[i].name), 0x20);
 				ifs.read(reinterpret_cast<char*>(&files[i].thing), 2);
 				LOG_EXTRA("current file: " << files[i].name << "  header offset: " << std::hex << ifs.tellg() << std::dec << "  file: " << i << "  type: " << std::hex << files[i].type << "  offset: " << files[i].offset << "  size: " << files[i].size << "  thing: " << files[i].thing);
 
@@ -189,12 +190,13 @@ bool ALAR_pack(fs::path dirIn, fs::path fileOut) {
 			}
 			ofs.write("\x1\x1", 2); //OG file also has this, dunno why
 			for (int i = 0; i < fileCount; i++) {
-				if (fileNameVector.front().size() > 0x22) {
-					LOG_ERROR("filename " << fileNameVector.front() << " is longer than what .aar packages can handle (max 34 characters)");
+				if (fileNameVector.front().size() > 0x20) {
+					LOG_ERROR("filename " << fileNameVector.front() << " is longer than what .aar packages can handle (max 32 characters)");
 					return false;
 				}
-				ofs << fileNameVector.front();
-				ofs.seekp((0x22 - fileNameVector.front().size()), std::ios::cur);
+				ofs << fileNameVector.front(); //write filename
+				ofs.seekp((0x20 - fileNameVector.front().size()), std::ios::cur);
+				ofs.write(reinterpret_cast<char*>(&fileThingVector.front()), 2); //add in the magic thing
 				std::streamoff fileOffsetLoc = ofs.tellp();
 				fs::path dataFileToPack = dirIn;
 				dataFileToPack /= fileNameVector.front();
