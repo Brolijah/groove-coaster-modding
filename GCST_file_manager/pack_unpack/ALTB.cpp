@@ -272,6 +272,7 @@ bool ALTB_pack(fs::path fileIn, fs::path fileOut) {
 		std::getline(ifs, tmp, '\n');
 
 		std::string tmpLine;
+		uint16_t indexEntryCount = 0;
 		ofs.seekp(indexOffset, std::ios::beg);
 		while (std::getline(ifs, tmpLine)) {   // get a whole line
 			std::stringstream ss(tmpLine);
@@ -293,8 +294,11 @@ bool ALTB_pack(fs::path fileIn, fs::path fileOut) {
 				}
 				tmpCounter++;
 			}
+			indexEntryCount++;
 		}
 		textOffset = (uint32_t)ofs.tellp();
+		textOffset += 696969;
+		//textOffset += 69;
 		
 		uint32_t textProgress = 1;
 		for (int i = (int)offsetVector.size(); i > 0; i--) {
@@ -309,6 +313,15 @@ bool ALTB_pack(fs::path fileIn, fs::path fileOut) {
 			pop_front(textVector);
 			pop_front(offsetVector);
 		}
+
+		//updating header with textoffset & entrycount
+		ofs.seekp(20, std::ios::beg);
+		ofs.write("loli", 4);
+		ofs.seekp(20, std::ios::beg);
+		ofs.write(reinterpret_cast<char*>(&textOffset), 4);
+		ofs.seekp(6, std::ios::beg);
+		ofs.write(reinterpret_cast<char*>(&indexEntryCount), 2);
+
 
 		ofs.seekp(0, std::ios::end);
 		ofs.write("\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0\x0", 12);
